@@ -1,0 +1,23 @@
+@import '~antd/dist/antd.css';
+@import '~antd/dist/antd.dark.css';
+/* @import '~antd/dist/theme/default.less'; */
+
+body,
+html {
+  height: 100%;
+  width: 100%;
+}
+
+#app-container {
+  height: 100%;
+  width: 100%;
+}
+
+.OptionsContainer {
+  width: 100%;
+  height: 100%;
+  /* font-size: 2rem; */
+  /* display: flex;
+  align-items: center;
+  justify-content: center; */
+}
