@@ -19,9 +19,11 @@ import { useToggle } from 'ahooks';
 import ChangeSyncFolder, {
   bookmarksToFolderData,
 } from '../components/ChangeSyncFolder';
-import { generateSyncPack, mergeSameNameOrSameUrlInSyncFolder, restoreSyncPack } from '../../../actions/generateSyncPack';
+import { generateSyncPack } from '../../../actions/generateSyncPack';
 import { useBookmarksTree, useSyncFolderId } from './hooks';
 import FileSelectorWraper from '../components/FileSelector';
+import { mergeSameNameOrSameUrlInSyncFolder } from '../../../actions/mergeSameNameOrSameUrlInSyncFolder';
+import { restoreSyncPack } from '../../../actions/restoreSyncPack';
 
 const bookmarksToTreeData = (treeData: any[]): DataNode[] => {
   return treeData.map((item) => {

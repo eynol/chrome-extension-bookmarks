@@ -1,12 +1,12 @@
 import React from 'react';
 import logo from '../../assets/img/logo.svg';
+import { Button } from 'antd';
 import Greetings from '../../containers/Greetings/Greetings';
 import './Popup.css';
 chrome.bookmarks.getTree((tree) => {
   console.log(tree);
 });
 
-console.log(chrome.bookmarks.search('https://www.google.com/'));
 const Popup = () => {
   return (
     <div className="App">
@@ -15,14 +15,11 @@ const Popup = () => {
         <p>
           Edit <code>src/pages/Popup/Popup.jsx</code> and save to reload.
         </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React!
-        </a>
+        <Button onClick={ () => {
+          chrome.tabs.create({
+            url: "options.html"
+          });
+        } }>打开options</Button>
       </header>
     </div>
   );

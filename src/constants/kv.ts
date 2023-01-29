@@ -8,3 +8,10 @@ export enum Pages {
     Manage = 'manage',
 }
 
+
+export interface SyncPackNode {
+    id: string;
+    title: string;
+    url?: string;
+    children?: SyncPackNode[];
+}
