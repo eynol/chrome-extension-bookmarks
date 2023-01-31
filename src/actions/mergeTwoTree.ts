@@ -10,7 +10,7 @@ const cloneWithKeys = <T extends { [k: string]: any }>(obj: T, keys: (keyof T)[]
     return result
 }
 
-export const mergeJsonTreeMark = (chromeTree: EditedChromeNode) => {
+export const mergeTwoTreeMark = (chromeTree: EditedChromeNode) => {
 
     const result: EditedChromeNode = cloneWithKeys(chromeTree, ['id', 'title', 'url', 'index', 'children', 'parentId', 'created', 'removed']);
 

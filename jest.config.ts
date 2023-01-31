@@ -101,6 +101,7 @@ export default {
 
   // A preset that is used as a base for Jest's configuration
   // preset: undefined,
+  preset: "ts-jest",
 
   // Run tests from one or more projects
   // projects: undefined,
@@ -144,6 +145,7 @@ export default {
   // snapshotSerializers: [],
 
   // The test environment that will be used for testing
+  // testEnvironment: "jsdom",
   testEnvironment: "node",
 
   // Options that will be passed to the testEnvironment
@@ -174,7 +176,7 @@ export default {
 
   // A map from regular expressions to paths to transformers
   // transform: undefined,
-
+  transform: {},
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
   // transformIgnorePatterns: [
   //   "/node_modules/",
