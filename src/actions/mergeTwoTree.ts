@@ -10,9 +10,35 @@ const cloneWithKeys = <T extends { [k: string]: any }>(obj: T, keys: (keyof T)[]
     return result
 }
 
-export const mergeTwoTreeMark = (chromeTree: EditedChromeNode) => {
+/** merge source to target */
+export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeNode,) => {
 
-    const result: EditedChromeNode = cloneWithKeys(chromeTree, ['id', 'title', 'url', 'index', 'children', 'parentId', 'created', 'removed']);
+    const { children: targetChildren } = target;
+    const { children: sourceChildren } = source;
+
+    // if target has no children, just replace it
+    if (!targetChildren || targetChildren.length === 0) {
+        target.children = sourceChildren ?? [];
+
+        markChildrenAsCreated(target);
+
+        return target;
+    }
+
+    // if source has no children, just return target
+    if (!sourceChildren || sourceChildren.length === 0) {
+        return target
+    }
+
+    // if both has children, merge them
+    // use vue diff algorithm
+    let targetLeft = 0;
+    let targetRight = targetChildren.length - 1;
+    let sourceLeft = 0;
+    let sourceRight = sourceChildren.length - 1;
+
+
+    const result: EditedChromeNode = cloneWithKeys(source, ['id', 'title', 'url', 'index', 'children', 'parentId', 'created', 'removed']);
 
     if (result.children && result.children.length > 0) {
         const children = result.children;
