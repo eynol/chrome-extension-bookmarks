@@ -1,229 +1,84 @@
+import { EditedChromeNode } from '../interfaces';
 import { mergeJsonTreeMark } from './mergeJsonTree';
+import { gen, DEL, NEW } from './testUtils';
 
+describe('mergeJsonTreeMark func', () => {
+    it('should return it back with no changes', () => {
 
-
-describe('整理树内部重复节点的状态', () => {
-    test('没有找到就不清除重复的', () => {
-
-        const data = {
-            id: '1',
-            title: '1',
-            children: [
-                {
-                    id: '1',
-                    title: '节点1',
-                    index: 0,
-                    parentId: '1',
-                    children: [
-
-                    ],
-                },
-            ],
-        }
+        const data = gen('1', [
+            gen('node1', [])
+        ])
         const result = mergeJsonTreeMark(data);
-
         expect(result).toEqual(data);
     })
 
-    test('没有找到就不清除重复的', () => {
+    it('should do nothing x2', () => {
 
-        const data = {
-            id: '1',
-            title: '1',
-            children: [
-                {
-                    id: '1',
-                    title: '节点1',
-                    index: 0,
-                    parentId: '1',
-                    children: [
-
-                    ],
-                },
-                {
-                    id: '1',
-                    title: '节点2',
-                    url: 'test'
-                }
-            ],
-        }
+        const data = gen('1', [
+            gen('node1', []),
+            gen('node2', 'test'),
+        ]);
         const result = mergeJsonTreeMark(Object.assign({}, data));
         expect(result).toEqual(data);
     })
-    test('删除相同的目录', () => {
-        expect(mergeJsonTreeMark({
-            id: '1',
-            title: '1',
-            children: [
-                {
-                    id: '1',
-                    title: '节点1',
-                    children: [],
-                },
-                {
-                    id: '1',
-                    title: '节点1',
-                },
-                {
-                    id: '2',
-                    title: '节点3',
-                    children: [],
-                },
-                {
-                    id: '1',
-                    title: '节点3',
-                }
-            ],
-        })).toEqual({
-            id: '1',
-            title: '1',
-            children: [
-                {
-                    id: '1',
-                    title: '节点1',
-                    children: [],
-                },
-                {
-                    id: '1',
-                    title: '节点1',
-                    removed: true
-                },
-                {
-                    id: '2',
-                    title: '节点3',
-                    children: [],
-                },
-                {
-                    id: '1',
-                    title: '节点3',
-                    removed: true,
-                }
-            ],
-        });
+    it('should remove same folder and url link', () => {
+        expect(mergeJsonTreeMark(
+            gen('1', [
+                gen('node1', [
+                    gen('node1', 'test'),
+                    gen('node1', 'test'),
+                ]),
+                gen('node1', []),
+                gen('node2', 'test'),
+                gen('node2', 'test'),
+            ])
+        )).toEqual(gen('1', [
+            gen('node1', [
+                gen('node1', 'test'),
+                gen('node1', 'test', DEL),
+            ]),
+            gen('node1', [], DEL),
+            gen('node2', 'test'),
+            gen('node2', 'test', DEL),
+        ]));
     })
 
-    test('合并相同的目录的子节点', () => {
-        expect(mergeJsonTreeMark({
-            id: '1',
-            title: '1',
-            children: [
-                {
-                    id: '1',
-                    title: '节点2',
-                    children: [{
-                        id: '1',
-                        url: 'url1',
-                        title: 't1'
-                    }],
-                },
-                {
-                    id: '1',
-                    title: '节点2',
-                    children: [
-                        {
-                            id: '1',
-                            url: 'url1',
-                            title: 't1'
-                        }
-                    ]
-                },
-                {
-                    id: '2',
-                    title: '节点3',
-                    children: [
-                        {
-                            id: '1',
-                            url: 'url1',
-                            title: 't1'
-                        },
-                        {
-                            id: '1',
-                            url: 'url2',
-                            title: 't1'
-                        },
+    it('should merge sub folders', () => {
+        expect(mergeJsonTreeMark(
+            gen('1', [
+                gen('node1', [
+                    gen('node2', [
+                        gen('node3', 'url1'),
+                    ]),
+                    gen('node2', 'test'),
+                ]),
+                gen('node1', [
+                    gen('node2', [
+                        gen('node3', 'url1'),
+                    ]),
+                    gen('node2', 'test'),
+                    gen('node2', [
+                        gen('node3', 'url1'),
+                        gen('node4', 'url2'),
+                    ]),
+                ]),
+                gen('node2', 'test'),
+                gen('node2', 'test'),
+            ])
 
-                    ],
-                },
-                {
-                    id: '1',
-                    title: '节点3',
-                    children: [
-                        {
-                            id: '1',
-                            title: 'subfolder',
-                            children: [
-                                {
-                                    id: '1',
-                                    title: 'anothersubfoler'
-                                }
-                            ]
-                        },
-                        {
-                            id: '1',
-                            url: 'url3',
-                            title: 't1'
-                        }
-                    ]
-                }
-            ],
-        })).toEqual({
-            id: '1',
-            title: '1',
-            children: [
-                {
-                    id: '1',
-                    title: '节点2',
-                    children: [{
-                        id: '1',
-                        url: 'url1',
-                        title: 't1'
-                    }],
-                },
-                {
-                    id: '1',
-                    title: '节点2',
-                    removed: true
-                },
-                {
-                    id: '2',
-                    title: '节点3',
-                    children: [
-                        {
-                            id: '1',
-                            url: 'url1',
-                            title: 't1'
-                        },
-                        {
-                            id: '1',
-                            url: 'url2',
-                            title: 't1'
-                        },
-                        {
-                            id: '1',
-                            title: 'subfolder',
-                            created: true,
-                            children: [
-                                {
-                                    id: '1',
-                                    created: true,
-                                    title: 'anothersubfoler'
-                                }
-                            ]
-                        },
-                        {
-                            id: '1',
-                            created: true,
-                            url: 'url3',
-                            title: 't1'
-                        }
-                    ],
-                },
-                {
-                    id: '1',
-                    title: '节点3',
-                    removed: true,
-                }
-            ],
-        });
+        )).toEqual(
+            gen('1', [
+                gen('node1', [
+                    gen('node2', [
+                        gen('node3', 'url1'),
+                        gen('node4', 'url2', NEW),
+                    ]),
+                    gen('node2', 'test'),
+                ]),
+                gen('node1', [], DEL),
+                gen('node2', 'test'),
+                gen('node2', 'test', DEL),
+            ])
+        );
     })
 })

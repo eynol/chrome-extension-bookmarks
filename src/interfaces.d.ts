@@ -9,5 +9,6 @@ export interface SyncPackNode {
 export type EditedChromeNode = Omit<chrome.bookmarks.BookmarkTreeNode, 'children'> & {
     children?: EditedChromeNode[];
     removed?: boolean;
+    ordered?: boolean;
     created?: boolean;
 }

@@ -45,12 +45,14 @@ export const mergeJsonTreeMark = (chromeTree: EditedChromeNode) => {
 
                         // 把子节点复制过去
                         duplicatedItem.children.push(...currentNode.children.map(markChildrenAsCreated));
-                        delete currentNode.children;
+                        currentNode.children.length = 0;
                     }
                 }
             }
         }
         result.children = result.children.filter((child) => !(child.removed && child.created));
+    } else {
+        result.children = result.children || []
     }
     return result;
 }

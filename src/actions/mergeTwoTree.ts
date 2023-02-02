@@ -1,17 +1,12 @@
 import { EditedChromeNode } from "../interfaces";
 
-const cloneWithKeys = <T extends { [k: string]: any }>(obj: T, keys: (keyof T)[]) => {
-    const result: T = {} as T;
-    for (const key of keys) {
-        if (key in obj) {
-            result[key] = obj[key];
-        }
-    }
-    return result
-}
 const is = {
-    sameFolder(a: EditedChromeNode, b: EditedChromeNode) {
-        return 'url' in a?a.href=== b.href: a.title ===b.title
+    urlLink(node: EditedChromeNode) {
+        return 'url' in node
+    },
+    sameNode(a: EditedChromeNode, b: EditedChromeNode) {
+        // console.log(a, b)
+        return 'url' in a ? a.url === b.url : a.title === b.title
     }
 }
 
@@ -21,90 +16,148 @@ export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeN
     const { children: targetChildren } = target;
     const { children: sourceChildren } = source;
 
+    if (is.urlLink(target)) {
+        return target
+    }
     // if target has no children, just replace it
     if (!targetChildren || targetChildren.length === 0) {
         target.children = sourceChildren ?? [];
-
-        markChildrenAsCreated(target);
+        if (target.children.length > 0) {
+            target.children.forEach(markChildrenAsRemoved);
+        }
 
         return target;
     }
 
     // if source has no children, just return target
     if (!sourceChildren || sourceChildren.length === 0) {
+        if (targetChildren?.length ?? 0 > 0) {
+            targetChildren.forEach(markChildrenAsCreated)
+        }
         return target
     }
 
-    // if both has children, merge them
-    let mergedChildren = [];
+
     // use vue diff algorithm
     let targetLeft = 0;
     let targetRight = targetChildren.length - 1;
     let sourceLeft = 0;
     let sourceRight = sourceChildren.length - 1;
 
-    
-    let tergetLeftNode = targetChildren[0];
-    let tergetRightNode = targetChildren[targetRight];
+
+    let targetLeftNode = targetChildren[0];
+    let targetRightNode = targetChildren[targetRight];
     let sourceLeftNode = sourceChildren[0];
     let sourceRightNode = sourceChildren[sourceRight];
-    
+
     while (targetLeft <= targetRight && sourceLeft <= sourceRight) {
-        if (is.sameFolder(targetLeftNode,sourceLeftNode)){
-            mergedChildren.push([targetLeftNode, sourceLeftNode])
-            
-            targetLeftNode=targetChildren[++targetLeft];
-            sourceLeftNode=sourceChildren[++sourceLeft];
+        // console.log(targetLeft, targetRight, sourceLeft, sourceRight)
+        // may have been removed
+        if (sourceLeftNode === null) {
+            sourceLeftNode = sourceChildren[++sourceLeft];
+        } else if (sourceRightNode === null) {
+            sourceRightNode = sourceChildren[--sourceRight];
         }
-    } 
-    
-    const result: EditedChromeNode = cloneWithKeys(source, ['id', 'title', 'url', 'index', 'children', 'parentId', 'created', 'removed']);
+        // else if (targetLeftNode === null) {
+        //     targetLeftNode = targetChildren[++targetLeft];
+        // } else if (targetRightNode === null) {
+        //     targetRightNode = targetChildren[--targetRight];
+        // }
 
-    if (result.children && result.children.length > 0) {
-        const children = result.children;
-        // 倒序遍历
-        for (let currentIndex = children.length - 1; currentIndex >= 0; currentIndex--) {
-            const currentNode = children[currentIndex];
-            const isUrlLink = currentNode.url !== undefined;
-            // 从前遍历
-            const mayBeSameIndex = children.findIndex((unknownChild) => {
-                if (isUrlLink) {
-                    return unknownChild.url === currentNode.url
-                }
-                return unknownChild.title === currentNode.title;
-            });
+        else if (is.sameNode(targetLeftNode, sourceLeftNode)) {
+            mergeTwoTreeMark(targetLeftNode, sourceLeftNode);
+            if (targetLeft !== sourceLeft) {
+                targetLeftNode.ordered = true
+            }
+            targetLeftNode = targetChildren[++targetLeft];
+            sourceLeftNode = sourceChildren[++sourceLeft];
+        }
+        else if (is.sameNode(targetRightNode, sourceRightNode)) {
+            mergeTwoTreeMark(targetRightNode, sourceRightNode);
+            if (targetRight !== sourceRight) {
+                targetRightNode.ordered = true
+            }
 
-            if (mayBeSameIndex === currentIndex) {
-                // same node and no other additional
-                if (!isUrlLink) {
-                    // is folder node
-                    children[currentIndex] = mergeJsonTreeMark(currentNode);
-                }
-            } else {
+            targetRightNode = targetChildren[--targetRight];
+            sourceRightNode = sourceChildren[--sourceRight];
+        } else if (is.sameNode(targetLeftNode, sourceRightNode)) {
 
-                currentNode.removed = true;
-                if (!isUrlLink) {
-                    const duplicatedItem = children[mayBeSameIndex];
-                    // 是文件夹合并
-                    if (currentNode.children && currentNode.children.length > 0) {
-                        duplicatedItem.children = duplicatedItem.children || [];
+            mergeTwoTreeMark(targetLeftNode, sourceRightNode);
+            if (targetLeft !== sourceRight) {
+                targetLeftNode.ordered = true;
+            }
+            targetLeftNode.ordered = true;
 
-                        // 把子节点复制过去
-                        duplicatedItem.children.push(...currentNode.children.map(markChildrenAsCreated));
-                        delete currentNode.children;
-                    }
+            targetLeftNode = targetChildren[++targetLeft];
+            sourceRightNode = sourceChildren[--sourceRight];
+        } else if (is.sameNode(targetRightNode, sourceLeftNode)) {
+            mergeTwoTreeMark(targetRightNode, sourceLeftNode);
+            if (targetRight !== sourceLeft) {
+                targetRightNode.ordered = true;
+            }
+
+            targetRightNode = targetChildren[--targetRight];
+            sourceLeftNode = sourceChildren[++sourceLeft];
+        } else {
+            // find same node in source
+            let foundLeft = false;
+
+            for (let tempSourceLeft = sourceLeft + 1; tempSourceLeft < sourceRight; tempSourceLeft++) {
+                const tempSourceNode = sourceChildren[tempSourceLeft];
+                if (tempSourceNode && !foundLeft && is.sameNode(targetLeftNode, tempSourceNode)) {
+                    foundLeft = true;
+                    mergeTwoTreeMark(targetLeftNode, tempSourceNode);
+                    // console.log('ordered between', targetLeftNode)
+                    targetLeftNode.ordered = true;
+                    (sourceChildren[tempSourceLeft] as unknown) = null;
                 }
             }
+            if (!foundLeft) {
+                markChildrenAsCreated(targetLeftNode);
+            }
+            targetLeftNode = targetChildren[++targetLeft];
+
         }
-        result.children = result.children.filter((child) => !(child.removed && child.created));
+
     }
-    return result;
+    // console.log(sourceLeft, sourceRight, targetLeft, targetRight)
+
+
+    if (sourceLeft > sourceRight && targetLeft <= targetRight) {
+        // source is empty,remain target
+        for (let i = targetLeft; i <= targetRight; i++) {
+            const node = targetChildren[i];
+            if (node) {
+                markChildrenAsCreated(node);
+            }
+        }
+    }
+    else if (targetLeft > targetRight && sourceLeft <= sourceRight) {
+        // target is empty, add source
+        for (let i = sourceLeft; i <= sourceRight; i++) {
+            const node = sourceChildren[i];
+            if (node) {
+                markChildrenAsRemoved(node);
+                targetChildren.push(node);
+            }
+        }
+    }
+
+    return target;
 }
 
 const markChildrenAsCreated = (node: EditedChromeNode) => {
     node.created = true;
     if (node.children && node.children.length > 0) {
         node.children.forEach(markChildrenAsCreated)
+    }
+    return node
+}
+
+const markChildrenAsRemoved = (node: EditedChromeNode) => {
+    node.removed = true;
+    if (node.children && node.children.length > 0) {
+        node.children.forEach(markChildrenAsRemoved)
     }
     return node
 }
