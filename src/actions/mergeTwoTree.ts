@@ -9,6 +9,11 @@ const cloneWithKeys = <T extends { [k: string]: any }>(obj: T, keys: (keyof T)[]
     }
     return result
 }
+const is = {
+    sameFolder(a: EditedChromeNode, b: EditedChromeNode) {
+        return 'url' in a?a.href=== b.href: a.title ===b.title
+    }
+}
 
 /** merge source to target */
 export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeNode,) => {
@@ -31,13 +36,28 @@ export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeN
     }
 
     // if both has children, merge them
+    let mergedChildren = [];
     // use vue diff algorithm
     let targetLeft = 0;
     let targetRight = targetChildren.length - 1;
     let sourceLeft = 0;
     let sourceRight = sourceChildren.length - 1;
 
-
+    
+    let tergetLeftNode = targetChildren[0];
+    let tergetRightNode = targetChildren[targetRight];
+    let sourceLeftNode = sourceChildren[0];
+    let sourceRightNode = sourceChildren[sourceRight];
+    
+    while (targetLeft <= targetRight && sourceLeft <= sourceRight) {
+        if (is.sameFolder(targetLeftNode,sourceLeftNode)){
+            mergedChildren.push([targetLeftNode, sourceLeftNode])
+            
+            targetLeftNode=targetChildren[++targetLeft];
+            sourceLeftNode=sourceChildren[++sourceLeft];
+        }
+    } 
+    
     const result: EditedChromeNode = cloneWithKeys(source, ['id', 'title', 'url', 'index', 'children', 'parentId', 'created', 'removed']);
 
     if (result.children && result.children.length > 0) {
