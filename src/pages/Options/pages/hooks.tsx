@@ -41,7 +41,7 @@ export const useSyncFolderId = () => {
         });
 
         const listener = (changes: { [key: string]: chrome.storage.StorageChange; }, areaName: "sync" | "local" | "managed") => {
-            if (kSyncFolderId in changes) {
+            if (areaName === 'sync' && kSyncFolderId in changes) {
                 setSyncFolderId(changes[kSyncFolderId].newValue)
             }
         }

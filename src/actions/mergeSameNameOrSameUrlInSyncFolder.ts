@@ -12,7 +12,6 @@ export const mergeSameNameOrSameUrlInSyncFolder = async () => {
     const markdedTree = mergeJsonTreeMark(node);
     await singleTreeWalker(markdedTree, {
         async created({ currentNode, parent, order }) {
-
             const createdNode = await chrome.bookmarks.create({
                 parentId: parent?.id,
                 index: order,

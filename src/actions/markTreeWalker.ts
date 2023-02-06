@@ -26,12 +26,13 @@ export const singleTreeWalker = async (node: EditedChromeNode, editor: {
                 })
 
             } else if (child.created) {
-                await editor.created({
+                const newNode = await editor.created({
                     currentNode: child,
                     parent: node,
                     order: i,
                     paths: paths
                 })
+                child.id = newNode.id;
                 await singleTreeWalker(child, editor, [...paths, child.title!])
             } else if (child.ordered) {
                 await editor.ordered({

@@ -1,5 +1,14 @@
 export const kSyncFolderId = 'sync_folder_id';
+export const kSyncMagicId = 'sync_magic_id';
 
+export const kSyncState = 'sync_state';
+
+
+export enum SyncState {
+    NotSynced = 'not_synced',
+    Syncing = 'syncing',
+    Synced = 'synced',
+}
 
 export enum Pages {
     Home = 'home',
