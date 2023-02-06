@@ -1,18 +1,8 @@
 import { EditedChromeNode } from "../interfaces";
 
-const cloneWithKeys = <T extends { [k: string]: any }>(obj: T, keys: (keyof T)[]) => {
-    const result: T = {} as T;
-    for (const key of keys) {
-        if (key in obj) {
-            result[key] = obj[key];
-        }
-    }
-    return result
-}
-
 export const mergeJsonTreeMark = (chromeTree: EditedChromeNode) => {
 
-    const result: EditedChromeNode = cloneWithKeys(chromeTree, ['id', 'title', 'url', 'index', 'children', 'parentId', 'created', 'removed']);
+    const result: EditedChromeNode = Object.assign({} as EditedChromeNode, chromeTree);
 
     if (result.children && result.children.length > 0) {
         const children = result.children;

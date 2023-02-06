@@ -60,6 +60,31 @@ describe('merge two tree ', () => {
         );
     })
 
+})
+
+describe('merge props', () => {
+    it('should merge props', () => {
+        expect(mergeTwoTreeMark(
+            gen('1', [
+                gen('2', [], { id: 1 }),
+                gen('2', 'url1', { 'fool': 'bar' }),
+            ]),
+            gen('1', [
+                gen('2', [], { id: 334, parent: 'test' }),
+                gen('xxx', 'url33')
+            ]),
+        )).toEqual(
+            gen('1', [
+                gen('2', [], { id: 334, parent: 'test', }),
+                gen('2', 'url1', { 'fool': 'bar', ...NEW }),
+                gen('xxx', 'url33', DEL)
+            ]),
+        );
+    })
+})
+
+
+describe('create node', () => {
 
     test('create folder at level 1', () => {
         const result = mergeTwoTreeMark(
@@ -164,6 +189,12 @@ describe('merge two tree ', () => {
         );
     })
 
+})
+
+
+
+
+describe('reorder node', () => {
     test('reorder 2 of 4 element at begin  level 1', () => {
         const result = mergeTwoTreeMark(
             gen('1', [
@@ -258,6 +289,8 @@ describe('merge two tree ', () => {
         );
     })
 })
+
+
 describe('match edge condition', () => {
     it('should mark all as removed', () => {
         const result = mergeTwoTreeMark(
@@ -341,6 +374,138 @@ describe('match edge condition', () => {
                 gen('f', 'f', ORDER),
                 gen('g', 'g', ORDER),
                 gen('h', 'h', ORDER),
+            ])
+        );
+    })
+})
+
+describe('mergeTwoTreeMark merge', () => {
+    it('should merge two complex folder', () => {
+        const result = mergeTwoTreeMark(
+            gen('1', [
+                gen('News', [
+                    gen('Daily', [
+                        gen('yesterday news', 'url2'),
+                        gen('today news', 'url1'),
+                    ]),
+                    gen('Weekly', [
+                        gen('always good news', 'url2'),
+                        gen('Weekly news', 'url1'),
+                    ]),
+                ]),
+                gen('Videos', [
+                    gen('Funny', 'url3'),
+                    gen('Sad', 'url5'),
+                    gen('Cute', 'url4'),
+                ]),
+                gen('Favorite', [
+                    gen('torrent resources', [
+                        gen('linux', 'url6'),
+                        gen('windows', 'url7'),
+                        gen('mac', 'url8'),
+                    ]),
+                ]),
+                gen('Blog', [
+                    gen('my blog', 'url9'),
+                    gen('Designer', [
+                        gen('designer 1', 'url10'),
+                        gen('designer 2', 'url11'),
+                    ]),
+                ]),
+                gen('Work', [
+                    gen('Deploy', [
+                        gen('deploy 1', 'url12'),
+                    ]),
+                    gen('Navi', 'url1'),
+                    gen('todo', [
+                        gen('todo 1', 'url13'),
+                        gen('todo 3', 'url15'),
+                        gen('todo 2', 'url14'),
+                    ])
+                ]),
+
+            ]),
+            gen('1', [
+                gen('News', [
+                    gen('Daily', [
+                        gen('today news', 'url1'),
+                        gen('yesterday news', 'url2'),
+                    ]),
+                    gen('Weekly', [
+                        gen('Weekly news', 'url1'),
+                        gen('always good news', 'url2'),
+                    ]),
+                ]),
+                gen('Favorite', [
+                    gen('Videos', [
+                        gen('Funny', 'url3'),
+                        gen('Cute', 'url4'),
+                        gen('Sad', 'url5'),
+                    ]),
+                    gen('torrent resources', [
+                        gen('linux', 'url6'),
+                        gen('windows', 'url7'),
+                        gen('mac', 'url8'),
+                    ]),
+                ]),
+                gen('Work', [
+                    gen('Deploy', [
+                        gen('deploy 1', 'url12'),
+                    ]),
+                    gen('todo', [
+                        gen('todo 1', 'url13'),
+                        gen('todo 2', 'url14'),
+                    ]),
+                    gen('Navi', 'url1'),
+                ]),
+            ]));
+        expect(result).toEqual(
+            gen('1', [
+                gen('News', [
+                    gen('Daily', [
+                        gen('yesterday news', 'url2', ORDER),
+                        gen('today news', 'url1', ORDER),
+                    ]),
+                    gen('Weekly', [
+                        gen('always good news', 'url2', ORDER),
+                        gen('Weekly news', 'url1', ORDER),
+                    ]),
+                ]),
+                gen('Videos', [
+                    gen('Funny', 'url3', NEW),
+                    gen('Sad', 'url5', NEW),
+                    gen('Cute', 'url4', NEW),
+                ], NEW),
+                gen('Favorite', [
+                    gen('torrent resources', [
+                        gen('linux', 'url6'),
+                        gen('windows', 'url7'),
+                        gen('mac', 'url8'),
+                    ], ORDER),
+                    gen('Videos', [
+                        gen('Funny', 'url3', DEL),
+                        gen('Cute', 'url4', DEL),
+                        gen('Sad', 'url5', DEL),
+                    ], DEL),
+                ], ORDER),
+                gen('Blog', [
+                    gen('my blog', 'url9', NEW),
+                    gen('Designer', [
+                        gen('designer 1', 'url10', NEW),
+                        gen('designer 2', 'url11', NEW),
+                    ], NEW),
+                ], NEW),
+                gen('Work', [
+                    gen('Deploy', [
+                        gen('deploy 1', 'url12'),
+                    ]),
+                    gen('Navi', 'url1', ORDER),
+                    gen('todo', [
+                        gen('todo 1', 'url13'),
+                        gen('todo 3', 'url15', NEW),
+                        gen('todo 2', 'url14', ORDER),
+                    ], ORDER)
+                ], ORDER),
             ])
         );
     })

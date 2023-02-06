@@ -13,9 +13,9 @@ const is = {
 /** merge source to target */
 export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeNode,) => {
 
-    const { children: targetChildren } = target;
-    const { children: sourceChildren } = source;
-
+    const { children: targetChildren, } = target;
+    const { children: sourceChildren, ...restSource } = source;
+    Object.assign(target, restSource)
     if (is.urlLink(target)) {
         return target
     }
