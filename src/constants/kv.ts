@@ -1,6 +1,7 @@
 export const kSyncFolderId = 'sync_folder_id';
 export const kSyncMagicId = 'sync_magic_id';
-
+export const kOriginalRecord = 'sync_original-record';
+export const kModifyedRecord = 'sync_original-record';
 export const kSyncState = 'sync_state';
 
 
