@@ -1,16 +1,42 @@
-import { useEffect, useState, useCallback } from "react"
-import { kSyncFolderId } from "../../../constants/kv";
+import { useEffect, useState, useCallback, useRef } from "react"
+import { kProcessing, kSyncFolderId } from "../../../constants/kv";
 
+export const useProcessing = () => {
+    const [processing, setProcessing] = useState(false);
+    useEffect(() => {
+        chrome.storage.local.get(kProcessing, (result) => {
+            setProcessing(result[kProcessing])
+        })
+
+        const handler = (changes: {
+            [key: string]: chrome.storage.StorageChange;
+        }, areaName: "sync" | "local" | "managed") => {
+            if (kProcessing in changes) {
+                setProcessing(changes[kProcessing].newValue)
+            }
+        }
+        chrome.storage.onChanged.addListener(handler)
+        return () => {
+            chrome.storage.onChanged.removeListener(handler)
+        }
+    }, [])
+
+    return processing;
+}
 export const useBookmarksTree = () => {
     const [tree, setTree] = useState<chrome.bookmarks.BookmarkTreeNode[]>([]);
-
+    const processing = useProcessing();
     const getTree = useCallback(() => {
+        /** if processing ,return do nothing */
+        if (processing) {
+            return;
+        }
         chrome.bookmarks.getTree((tree) => {
             setTree(tree)
         })
-    }, []);
+    }, [processing]);
     // 第一次初始化时获取书签树
-    useEffect(getTree, [])
+    useEffect(getTree, [processing])
     useEffect(() => {
         // 监听书签树变化
         chrome.bookmarks.onCreated.addListener(getTree)
@@ -24,7 +50,7 @@ export const useBookmarksTree = () => {
             chrome.bookmarks.onChanged.removeListener(getTree)
             chrome.bookmarks.onRemoved.removeListener(getTree)
         }
-    }, [])
+    }, [processing])
 
     return tree
 }

@@ -4,7 +4,12 @@ export const kOriginalRecord = 'sync_original-record';
 export const kModifyedRecord = 'sync_original-record';
 export const kSyncState = 'sync_state';
 
+export const kProcessing = 'processing';
 
+
+export enum ExtActions {
+    'beginSync' = 'beginSync',
+}
 export enum SyncState {
     NotSynced = 'not_synced',
     Syncing = 'syncing',

@@ -1,6 +1,40 @@
+import { ExtActions, kModifyedRecord, kProcessing } from '../../constants/kv';
+import { restoreSyncPack } from '../../actions/restoreSyncPack'
+
 console.log('This is the background page.');
 console.log('Put the background scripts here.');
 
+const eventListender = async (message, sender, sendResponse) => {
+    console.log(sender, 'message', message)
+    if (message === ExtActions.beginSync) {
+        try {
+            await beiginMergeBookmarks();
+            sendResponse({ done: true });
+        } catch (e) {
+            sendResponse({ done: true, error: e });
+        }
+
+    }
+}
+chrome.runtime.onMessage.addListener(eventListender);
+
+async function beiginMergeBookmarks() {
+    const { [kModifyedRecord]: modifyedRecord } = await chrome.storage.local.get(kModifyedRecord)
+    console.log('modifyedRecord', modifyedRecord);
+    if (modifyedRecord) {
+        const processing = await chrome.storage.local.get(kProcessing)
+        if (processing[kProcessing]) {
+            return;
+        }
+        await chrome.storage.local.set({ [kProcessing]: true },)
+
+        await restoreSyncPack(modifyedRecord)
+
+        await chrome.storage.local.set({ [kProcessing]: false },)
+
+
+    }
+}
 
 chrome.storage.onChanged.addListener(function (changes, namespace) {
     for (let [key, { oldValue, newValue }] of Object.entries(changes)) {

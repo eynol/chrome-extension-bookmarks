@@ -11,7 +11,7 @@ import {
   Result,
   Space,
 } from 'antd';
-import { kSyncFolderId } from '../../../constants/kv';
+import { ExtActions, kModifyedRecord, kSyncFolderId } from '../../../constants/kv';
 import { DataNode } from 'antd/lib/tree';
 import { DefaultOptionType } from 'antd/lib/select';
 import useModal from 'antd/lib/modal/useModal';
@@ -89,6 +89,7 @@ export default function Home() {
 
   const tree = useBookmarksTree()
   useEffect(() => {
+    console.log('tree changed', tree)
     dispatch({
       type: homeStateActionType.setBookmarks,
       payload: tree,
@@ -168,7 +169,11 @@ export default function Home() {
                   const reader = new FileReader();
                   reader.onload = (e) => {
                     const data = JSON.parse(reader.result as string);
-                    restoreSyncPack(data)
+
+                    chrome.storage.local.set({ [kModifyedRecord]: data }).then(() => {
+                      chrome.runtime.sendMessage(ExtActions.beginSync)
+                    })
+                    // restoreSyncPack(data)
                   };
                   reader.readAsText(file);
                   console.log(file)
