@@ -1,8 +1,19 @@
-import { ExtActions, kModifyedRecord, kProcessing } from '../../constants/kv';
+import { ExtActions, kModifiedRecord, kProcessing, kSyncVersionId } from '../../constants/kv';
 import { restoreSyncPack } from '../../actions/restoreSyncPack'
 
-console.log('This is the background page.');
-console.log('Put the background scripts here.');
+
+setInterval(async () => {
+    console.log(new Date().toLocaleString(), 'interval')
+    const { [kSyncVersionId]: currentVersion } = await chrome.storage.sync.get(kSyncVersionId)
+    if (currentVersion === undefined) {
+        // not set sync id
+        return
+    }
+
+    const { version } = await (await fetch('http://127.0.0.1:4000/version')).json()
+
+    console.log('res', version, currentVersion)
+}, 5000)
 
 const eventListender = async (message, sender, sendResponse) => {
     console.log(sender, 'message', message)
@@ -19,7 +30,7 @@ const eventListender = async (message, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener(eventListender);
 
 async function beiginMergeBookmarks() {
-    const { [kModifyedRecord]: modifyedRecord } = await chrome.storage.local.get(kModifyedRecord)
+    const { [kModifiedRecord]: modifyedRecord } = await chrome.storage.local.get(kModifiedRecord)
     console.log('modifyedRecord', modifyedRecord);
     if (modifyedRecord) {
         const processing = await chrome.storage.local.get(kProcessing)

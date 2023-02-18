@@ -1,5 +1,5 @@
 import { useToggle } from 'ahooks';
-import { Modal, TreeSelect } from 'antd';
+import { Modal, Tree, TreeSelect } from 'antd';
 import { DefaultOptionType } from 'antd/lib/select';
 import React, { useEffect, useImperativeHandle, useState } from 'react';
 import { useBookmarksTree } from '../pages/hooks';
@@ -13,6 +13,7 @@ export const bookmarksToFolderData = (treeData: any[]): DefaultOptionType[] => {
       }
       return {
         value: id,
+        key: id,
         title,
         label: title,
         children: children && bookmarksToFolderData(children),
@@ -44,6 +45,26 @@ export default React.forwardRef(function ChangeSyncFolder(
     setFolders(bookmarksToFolderData(tree));
   }, [tree]);
 
+  const defualtExpandedKeys = React.useMemo(() => {
+    const expandedKeys: string[] = [];
+    const walk = (tree: chrome.bookmarks.BookmarkTreeNode[], deepth = 2) => {
+      if (deepth <= 0) {
+        return;
+      }
+      for (const node of tree) {
+        if (node.children) {
+          if (!node.url) {
+            expandedKeys.push(node.id);
+          }
+          walk(node.children, deepth - 1);
+        }
+      }
+    }
+    walk(tree)
+
+    return expandedKeys
+  }, [tree]);
+
   useImperativeHandle(
     ref,
     () => {
@@ -54,6 +75,7 @@ export default React.forwardRef(function ChangeSyncFolder(
     []
   );
 
+  console.log('reder', folders, defualtExpandedKeys)
   return (
     <>
       <Modal
@@ -71,15 +93,21 @@ export default React.forwardRef(function ChangeSyncFolder(
         }}
         onCancel={setLeft}
       >
-        <TreeSelect
+        {/* <TreeSelect
           dropdownMatchSelectWidth={false}
           placeholder="请选择需要同步的目录"
-          treeDefaultExpandedKeys={['0']}
+          treeDefaultExpandedKeys={defualtExpandedKeys}
           value={selectedFolderId}
           treeLine={true}
           onSelect={setSelectedFolderId}
           treeData={folders}
-        />
+        /> */}
+        <Tree treeData={folders}
+          onSelect={(keys) => {
+            setSelectedFolderId(keys[0] as string)
+          }}
+          defaultExpandedKeys={defualtExpandedKeys}
+          defaultSelectedKeys={[selectedFolderId!]} showLine />
       </Modal>
       {React.Children.only(props.children) &&
         props.children &&

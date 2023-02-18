@@ -1,8 +1,9 @@
 export const kSyncFolderId = 'sync_folder_id';
-export const kSyncMagicId = 'sync_magic_id';
-export const kOriginalRecord = 'sync_original-record';
-export const kModifyedRecord = 'sync_original-record';
-export const kSyncState = 'sync_state';
+export const kSyncVersionId = 'sync_version_id';
+
+export const kOriginalRecord = 'local_original-record';
+export const kModifiedRecord = 'local_modified-record';
+
 
 export const kProcessing = 'processing';
 
@@ -10,6 +11,7 @@ export const kProcessing = 'processing';
 export enum ExtActions {
     'beginSync' = 'beginSync',
 }
+
 export enum SyncState {
     NotSynced = 'not_synced',
     Syncing = 'syncing',

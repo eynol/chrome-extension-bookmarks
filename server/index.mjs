@@ -12,7 +12,7 @@ const FOLDER = process.env.FOLDER || __dirname;
 const FAV_ICON = path.join(__dirname, 'favicon.ico');
 const FILE_VERSION = path.join(FOLDER, 'version.txt');
 const FILE_CONFIG = path.join(FOLDER, 'config.json')
-
+const ENABLE_LOG = process.env.DEBUG || false;
 class APP {
     ready = false;
     version = -1;
@@ -72,6 +72,7 @@ const handleRequestBody = (req, cb) => {
 }
 const server = http.createServer((req, res) => {
     const reqUrl = new URL(req.url, `http://${req.headers.host}`);
+    if (ENABLE_LOG) console.log(new Date().toLocaleString(), req.method + ' ' + req.url);
     if (reqUrl.pathname === '/favicon.ico') {
         res.setHeader('Content-Type', 'image/x-icon')
         res.setHeader('Cache-Control', 'public, max-age=31536000')

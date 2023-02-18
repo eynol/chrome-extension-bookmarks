@@ -1,5 +1,32 @@
 import { useEffect, useState, useCallback, useRef } from "react"
-import { kProcessing, kSyncFolderId } from "../../../constants/kv";
+import { kProcessing, kSyncFolderId, kSyncVersionId } from "../../../constants/kv";
+
+export const useSyncVersion = () => {
+    const [syncVersion, setSyncVersionRaw] = useState(-1);
+
+    const setSyncVersion = useCallback((version: number) => {
+        chrome.storage.sync.set({ [kSyncVersionId]: version })
+    }, [])
+
+    useEffect(() => {
+        chrome.storage.sync.get(kSyncVersionId, (result) => {
+            setSyncVersionRaw(result[kSyncVersionId] ?? -1)
+        })
+        const handler = (changes: {
+            [key: string]: chrome.storage.StorageChange;
+        }, areaName: "sync" | "local" | "managed") => {
+            if (kSyncVersionId in changes) {
+                setSyncVersionRaw(changes[kSyncVersionId].newValue)
+            }
+        }
+        chrome.storage.onChanged.addListener(handler)
+        return () => {
+            chrome.storage.onChanged.removeListener(handler)
+        }
+    }, [])
+
+    return [syncVersion, setSyncVersion] as const;
+}
 
 export const useProcessing = () => {
     const [processing, setProcessing] = useState(false);
