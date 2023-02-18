@@ -3,7 +3,7 @@ import { decryptMessage, encryptMessage } from "./aesUtils";
 
 export const walkThroughNativeStructure = (node: chrome.bookmarks.BookmarkTreeNode) => {
     const { title, url, id: oldId, children } = node;
-    const result: SyncPackNode = { id: oldId, title, url };
+    const result: SyncPackNode = { id: '_' + oldId, title, url };
     if (children) {
         result.children = children.map(walkThroughNativeStructure);
     }

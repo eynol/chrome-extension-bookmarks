@@ -26,7 +26,7 @@ class APP {
             }
         }
         if (fs.existsSync(FILE_CONFIG)) {
-            const content = fs.readFileSync(FILE_VERSION, 'utf8');
+            const content = fs.readFileSync(FILE_CONFIG, 'utf8');
             try {
                 const config = JSON.parse(content);
                 if (config) {
@@ -78,10 +78,10 @@ const server = http.createServer((req, res) => {
         res.setHeader('Cache-Control', 'public, max-age=31536000')
         fs.createReadStream(FAV_ICON).pipe(res)
     } else if (reqUrl.pathname === '/version' && req.method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ version: app.getVersion() }));
     } else if (reqUrl.pathname === '/config' && req.method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify(app.getConfig()));
     } else if (reqUrl.pathname === '/version' && req.method === 'POST') {
         handleRequestBody(req, (data) => {
@@ -89,13 +89,13 @@ const server = http.createServer((req, res) => {
                 const version = parseInt(data);
                 if (!isNaN(version)) {
                     app.updateVersion(version);
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                     res.end(JSON.stringify({ version: app.getVersion() }));
                 } else {
                     throw new Error('not a number')
                 }
             } catch (e) {
-                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                 res.end(JSON.stringify({ version: app.getVersion(), message: e?.message }));
             }
         })
@@ -103,11 +103,11 @@ const server = http.createServer((req, res) => {
         if (reqUrl.searchParams.has('version')) {
             const version = parseInt(reqUrl.searchParams.get('version'));
             if (isNaN(version)) {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
                 res.end(JSON.stringify({ version: app.getVersion(), message: 'version is not a number' }));
                 return;
             } else if (version !== app.getVersion()) {
-                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
                 res.end(JSON.stringify({ version: app.getVersion(), message: 'version is not match' }));
                 return;
             } else {
@@ -115,30 +115,30 @@ const server = http.createServer((req, res) => {
                     try {
                         const config = JSON.parse(data);
                         if (version !== app.getVersion()) {
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
                             res.end(JSON.stringify({ version: app.getVersion(), message: 'version is not match' }));
                             return;
                         }
                         if (typeof config === 'object') {
                             app.updateConfig(config);
                             app.updateVersion(version + 1)
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
                             res.end(JSON.stringify({ version: app.getVersion() }));
                         } else {
                             throw new Error('not a number')
                         }
                     } catch (e) {
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
                         res.end(JSON.stringify({ version: app.getVersion(), message: e?.message }));
                     }
                 })
             }
         } else {
-            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' })
             res.end(JSON.stringify({ version: app.getVersion(), message: 'version is not found' }))
         }
     } else {
-        res.writeHead(404, { 'Content-Type': 'application/json' })
+        res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' })
         res.end()
     }
 

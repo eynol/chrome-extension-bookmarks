@@ -18,6 +18,7 @@
     "tabs",
     "storage",
     "unlimitedStorage",
+    "notifications",
     "downloads"
   ],
   "content_scripts": [

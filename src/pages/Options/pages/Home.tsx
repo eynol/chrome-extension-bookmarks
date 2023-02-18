@@ -14,8 +14,10 @@ import {
   Dropdown,
   MenuProps,
   message,
+  Divider,
+  BackTop,
 } from 'antd';
-import { ExtActions, kModifiedRecord, kSyncFolderId } from '../../../constants/kv';
+import { ExtActions, kOriginalSyncPack, kSyncFolderId } from '../../../constants/kv';
 import { DataNode } from 'antd/lib/tree';
 import { DefaultOptionType } from 'antd/lib/select';
 import useModal from 'antd/lib/modal/useModal';
@@ -24,12 +26,13 @@ import ChangeSyncFolder, {
   bookmarksToFolderData,
 } from '../components/ChangeSyncFolder';
 import { generateSyncPack } from '../../../actions/generateSyncPack';
-import { useBookmarksTree, useSyncFolderId, useSyncVersion } from './hooks';
+import { useBookmarksTree, useSyncFolderId, useSyncRunning, useSyncVersion } from './hooks';
 import FileSelectorWraper from '../components/FileSelector';
 import { mergeSameNameOrSameUrlInSyncFolder } from '../../../actions/mergeSameNameOrSameUrlInSyncFolder';
 import { restoreSyncPack } from '../../../actions/restoreSyncPack';
-import { DownOutlined, EditFilled, EditOutlined, EditTwoTone } from '@ant-design/icons';
+import { DownOutlined, EditFilled, EditOutlined, EditTwoTone, PauseCircleFilled, PlaySquareFilled } from '@ant-design/icons';
 import ChangeSyncVersion from '../components/ChangeSyncVersion';
+import { DiffResult } from '../components/DiffResult';
 
 const bookmarksToTreeData = (treeData: any[]): DataNode[] => {
   return treeData.map((item) => {
@@ -84,9 +87,11 @@ const homeStateReducer = (state: any, action: any) => {
 
 export default function Home() {
 
-  const [syncVersion] = useSyncVersion()
-  const [syncFolderId, setSyncFolderId] = useSyncFolderId()
-  const [{ folders, bookmarks, syncFolderIdLoaded }, dispatch] =
+  const { syncVersion, remoteSyncVersion } = useSyncVersion()
+  const { syncFolderId, handleChangeSyncFolder: setSyncFolderId, syncFolderName } = useSyncFolderId()
+  const running = useSyncRunning()
+
+  const [{ folders, bookmarks }, dispatch] =
     React.useReducer(homeStateReducer, {
       bookmarks: [],
       folders: [],
@@ -103,41 +108,59 @@ export default function Home() {
     });
   }, [tree]);
 
-  const onClickDropdown: MenuProps['onClick'] = ({ key }) => {
+  const onClickDropdown: MenuProps['onClick'] = async ({ key }) => {
     // 下载同步文件
-    if (key === 'download-snapshot') {
-      generateSyncPack().then(result => {
-        const text = JSON.stringify(result, null, 2);
+    switch (key) {
+      case 'download-snapshot': {
+        const syncPack = await generateSyncPack();
+
+        const text = JSON.stringify(syncPack, null, 2);
         const blob = new Blob([text], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const now = new Date();
         const timeSuffix = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
         chrome.downloads.download({
           url,
-          filename: `${result.title}-sync-pack-${timeSuffix}.json`,
+          filename: `${syncPack.title}-sync-pack-${timeSuffix}.json`,
         })
-        message.success('done')
-        console.log(result);
-      })
-    }
+        console.log(syncPack);
 
-    // 删除同步id
-    if (key === 'clean-folder-id') {
-      setSyncFolderId(undefined);
-      message.success('done')
+        break;
+      }
+      case 'clean-folder-id': {
+        setSyncFolderId(undefined);
+        break;
+      }
+      case 'merge-sync-folder': {
+        await mergeSameNameOrSameUrlInSyncFolder();
+        break;
+      }
+      case 'pause-sync': {
+        await chrome.runtime.sendMessage(ExtActions.pauseSync)
+        break
+      }
+
+      case 'resume-sync': {
+        await chrome.runtime.sendMessage(ExtActions.resumeSync)
+        break
+      }
+      default: {
+        break;
+      }
     }
-    if (key === 'merge-sync-folder') {
-      mergeSameNameOrSameUrlInSyncFolder().then(() => {
-        message.success('合并完成')
-      })
-    }
-    message.info(`Click on item ${key}`);
+    message.success('done')
+
   };
 
 
   const items: MenuProps['items'] = [
+    { type: 'divider' },
     { label: '合并同步文件夹内的相同目录', key: 'merge-sync-folder', disabled: !syncFolderId },
     { label: '下载快照', key: 'download-snapshot', disabled: !syncFolderId },
+    { type: 'divider' },
+    running
+      ? { label: '暂停同步', icon: <PauseCircleFilled />, key: 'pause-sync' }
+      : { label: '开始同步', icon: <PlaySquareFilled />, key: 'resume-sync' },
     { type: 'divider' },
     { label: '清除同步目录id', danger: true, key: 'clean-folder-id' }, // 菜单项务必填写 key
   ];
@@ -169,75 +192,54 @@ export default function Home() {
   return (
     <Layout>
       <Header>
-        {
-          syncFolderId ? (
-            <>
-              <Space>
-                <span>当前版本:{syncVersion} <ChangeSyncVersion ><EditFilled /></ChangeSyncVersion></span>
-                <span> 同步的目录：{' '}
-                  <TreeSelect
-                    dropdownMatchSelectWidth={false}
-                    placeholder="请选择需要同步的目录"
-                    value={syncFolderId}
-                    showAction={['click']}
-                    // treeExpandedKeys={[kSyncFolderId]}
-                    treeDefaultExpandAll
-                    // disabled
-                    treeLine={true}
-                    treeData={folders}
-                  />
-                  <ChangeSyncFolder
-                    value={syncFolderId}
-                    onChange={setSyncFolderId}
-                  >
-                    <Button type="link">修改</Button>
-                  </ChangeSyncFolder>
-                </span>
-              </Space>
-              <Space>
-                <Dropdown menu={{ items, onClick: onClickDropdown }}>
-                  <a onClick={e => e.preventDefault()}>
-                    <Space>
-                      更多操作
-                      <DownOutlined />
-                    </Space>
-                  </a>
-                </Dropdown>
-                <FileSelectorWraper onChange={(file) => {
-                  const reader = new FileReader();
-                  reader.onload = (e) => {
-                    const data = JSON.parse(reader.result as string);
+        <Space>
+          <span>同步状态：{running ? '运行中' : '未运行'} </span>
+          <Divider type='vertical'></Divider>
+          <span>当前版本<ChangeSyncVersion ><EditFilled /></ChangeSyncVersion>:{syncVersion}/{remoteSyncVersion} </span>
+          <Divider type='vertical'></Divider>
+          <span>
+            同步的目录<ChangeSyncFolder
+              value={syncFolderId}
+              onChange={setSyncFolderId}
+            >
+              <EditFilled />
+            </ChangeSyncFolder>：{syncFolderName}
 
-                    chrome.storage.local.set({ [kModifiedRecord]: data }).then(() => {
-                      chrome.runtime.sendMessage(ExtActions.beginSync)
-                    })
-                    // restoreSyncPack(data)
-                  };
-                  reader.readAsText(file);
-                  console.log(file)
-                }}>
-                  <Button type="link" danger disabled={!syncFolderId}>上传快照覆盖</Button>
-                </FileSelectorWraper>
+          </span>
+          <Divider type='vertical'></Divider>
+          <Dropdown menu={{ items, onClick: onClickDropdown }}>
+            <a onClick={e => e.preventDefault()}>
+              <Space>
+                更多操作
+                <DownOutlined />
               </Space>
-            </>
-          ) : (
-            <Button type="primary">立即同步</Button>
-          )
-        }
+            </a>
+          </Dropdown>
+          <Divider type='vertical'></Divider>
+          <FileSelectorWraper onChange={(file) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const data = JSON.parse(reader.result as string);
+
+              chrome.storage.local.set({ [kOriginalSyncPack]: data }).then(() => {
+                chrome.runtime.sendMessage(ExtActions.override)
+              })
+              // restoreSyncPack(data)
+            };
+            reader.readAsText(file);
+            console.log(file)
+          }}>
+            <Button type="link" danger disabled={!syncFolderId}>上传快照覆盖</Button>
+          </FileSelectorWraper>
+        </Space>
       </Header>
       <Content>
         <Content>
-          <Tree
-            showLine
-            treeData={bookmarks}
-            autoExpandParent
-            defaultExpandedKeys={['0']}
-            defaultExpandParent
-          />
+          <DiffResult></DiffResult>
+          <BackTop />
         </Content>
         <Modal title="选择书签"></Modal>
       </Content>
-      <Footer>Footer</Footer>
     </Layout>
   );
 }

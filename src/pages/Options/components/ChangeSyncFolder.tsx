@@ -75,7 +75,6 @@ export default React.forwardRef(function ChangeSyncFolder(
     []
   );
 
-  console.log('reder', folders, defualtExpandedKeys)
   return (
     <>
       <Modal
@@ -93,15 +92,6 @@ export default React.forwardRef(function ChangeSyncFolder(
         }}
         onCancel={setLeft}
       >
-        {/* <TreeSelect
-          dropdownMatchSelectWidth={false}
-          placeholder="请选择需要同步的目录"
-          treeDefaultExpandedKeys={defualtExpandedKeys}
-          value={selectedFolderId}
-          treeLine={true}
-          onSelect={setSelectedFolderId}
-          treeData={folders}
-        /> */}
         <Tree treeData={folders}
           onSelect={(keys) => {
             setSelectedFolderId(keys[0] as string)

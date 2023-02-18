@@ -1,23 +1,52 @@
 import { useEffect, useState, useCallback, useRef } from "react"
-import { kProcessing, kSyncFolderId, kSyncVersionId } from "../../../constants/kv";
+import { ExtActions, kMarkedTreeForReview, kOriginalSyncPack, kProcessing, kSyncFolderId, kSyncRemoteVersionId, kSyncVersionId } from "../../../constants/kv";
+import { EditedChromeNode } from "../../../interfaces";
 
-export const useSyncVersion = () => {
-    const [syncVersion, setSyncVersionRaw] = useState(-1);
-
-    const setSyncVersion = useCallback((version: number) => {
-        chrome.storage.sync.set({ [kSyncVersionId]: version })
+type KeysToObject<T extends string> = {
+    [key in T]?: any
+}
+export const useChromeStorage: <T extends string>(areaName: 'local' | 'sync', keys: T[]) => readonly [KeysToObject<T>, (newValue: KeysToObject<T>) => Promise<void>] = <T extends string>(areaName: 'local' | 'sync', keys: T[]) => {
+    const [state, setState] = useState(() => {
+        const init: Record<string, any> = {};
+        keys.forEach(k => init[k] = undefined)
+        return init
+    });
+    const updateStorage = useCallback(async (newValue: Record<string, any>,) => {
+        await chrome.storage[areaName].set(newValue)
+        setState(origin => ({
+            ...origin,
+            ...newValue
+        }))
     }, [])
 
     useEffect(() => {
-        chrome.storage.sync.get(kSyncVersionId, (result) => {
-            setSyncVersionRaw(result[kSyncVersionId] ?? -1)
-        })
+
+        if ((keys)?.length > 0) {
+            chrome.storage[areaName].get(keys).then(r1 => {
+                setState(origin => ({
+                    ...origin,
+                    ...r1,
+                }))
+            })
+        }
+
+
         const handler = (changes: {
             [key: string]: chrome.storage.StorageChange;
         }, areaName: "sync" | "local" | "managed") => {
-            if (kSyncVersionId in changes) {
-                setSyncVersionRaw(changes[kSyncVersionId].newValue)
+            if (areaName === 'managed') {
+                return
             }
+            if (keys?.length > 0) {
+                const gatherd = keys.reduce((ret, key) => {
+                    if (key in changes) {
+                        ret[key] = changes[key].newValue
+                    }
+                    return ret
+                }, {} as Record<string, any>)
+                setState(origin => ({ ...origin, ...gatherd }))
+            }
+
         }
         chrome.storage.onChanged.addListener(handler)
         return () => {
@@ -25,30 +54,29 @@ export const useSyncVersion = () => {
         }
     }, [])
 
-    return [syncVersion, setSyncVersion] as const;
+    return [state, updateStorage] as const
+}
+
+export const useSyncVersion = () => {
+
+    const [state, setState] = useChromeStorage('sync', [kSyncVersionId, kSyncRemoteVersionId])
+
+    const syncVersion = state[kSyncVersionId];
+    const remoteSyncVersion = state[kSyncRemoteVersionId];
+    const setSyncVersion = useCallback((version: number) => {
+        setState({ [kSyncVersionId]: version })
+    }, [])
+    const setRemoteSyncVersion = useCallback((version: number) => {
+        setState({ [kSyncRemoteVersionId]: version })
+    }, [])
+
+
+    return { syncVersion, setSyncVersion, remoteSyncVersion, setRemoteSyncVersion };
 }
 
 export const useProcessing = () => {
-    const [processing, setProcessing] = useState(false);
-    useEffect(() => {
-        chrome.storage.local.get(kProcessing, (result) => {
-            setProcessing(result[kProcessing])
-        })
-
-        const handler = (changes: {
-            [key: string]: chrome.storage.StorageChange;
-        }, areaName: "sync" | "local" | "managed") => {
-            if (kProcessing in changes) {
-                setProcessing(changes[kProcessing].newValue)
-            }
-        }
-        chrome.storage.onChanged.addListener(handler)
-        return () => {
-            chrome.storage.onChanged.removeListener(handler)
-        }
-    }, [])
-
-    return processing;
+    const [state] = useChromeStorage('local', [kProcessing])
+    return state[kProcessing];
 }
 export const useBookmarksTree = () => {
     const [tree, setTree] = useState<chrome.bookmarks.BookmarkTreeNode[]>([]);
@@ -83,31 +111,74 @@ export const useBookmarksTree = () => {
 }
 
 export const useSyncFolderId = () => {
-    const [syncFolderId, setSyncFolderId] = useState<string | undefined>();
-    useEffect(() => {
-        chrome.storage.sync.get(kSyncFolderId, (result) => {
-            setSyncFolderId(result[kSyncFolderId])
-            // dispatch({
-            //   type: homeStateActionType.setSyncFolderId,
-            //   payload: result[kSyncFolderId],
-            // });
-        });
 
-        const listener = (changes: { [key: string]: chrome.storage.StorageChange; }, areaName: "sync" | "local" | "managed") => {
-            if (areaName === 'sync' && kSyncFolderId in changes) {
-                setSyncFolderId(changes[kSyncFolderId].newValue)
-            }
+    const [state, setState] = useChromeStorage('sync', [kSyncFolderId])
+    const syncFolderId = state[kSyncFolderId];
+
+    const [syncFolderName, setSyncFolderName] = useState<string>()
+
+    useEffect(() => {
+        if (syncFolderId) {
+            chrome.bookmarks.get(syncFolderId, (result) => {
+                setSyncFolderName(result[0].title)
+            })
         }
-        chrome.storage.onChanged.addListener(listener);
-        return () => {
-            chrome.storage.onChanged.removeListener(listener);
-        }
-    }, [])
+    }, [syncFolderId])
 
     const handleChangeSyncFolder = useCallback(async (id: string | undefined) => {
-        await chrome.storage.sync.set({ [kSyncFolderId]: id });
-        setSyncFolderId(id)
+        await setState({ [kSyncFolderId]: id })
     }, [])
 
-    return [syncFolderId, handleChangeSyncFolder] as const;
+    return { syncFolderId, syncFolderName, handleChangeSyncFolder, } as const;
+};
+
+export const useSyncRunning = () => {
+    const [running, setRunning] = useState(false);
+    useEffect(() => {
+        const listener = async () => {
+            chrome.runtime.sendMessage(ExtActions.isInterlvalExist, (resp: { running: boolean }) => {
+                setRunning(resp.running)
+            })
+        }
+        listener();
+        const timmer = setInterval(listener, 1000)
+        return () => {
+            clearInterval(timmer);
+        }
+    }, [])
+
+    return running
+}
+
+export const useConfilictStatus = () => {
+    const [syncState] = useChromeStorage('sync', [kSyncVersionId, kSyncRemoteVersionId,])
+
+    const [localState, setState] = useChromeStorage('local', [kOriginalSyncPack, kMarkedTreeForReview, kProcessing])
+
+    const updateMarkedTree = useCallback(async (record: EditedChromeNode) => {
+        await setState({ [kMarkedTreeForReview]: record })
+    }, [])
+
+    const isSameVersion = syncState[kSyncRemoteVersionId] === syncState[kSyncVersionId]
+    const isEasyMerge = syncState[kSyncRemoteVersionId] - syncState[kSyncVersionId] === 1
+    const isConflict = syncState[kSyncRemoteVersionId] - syncState[kSyncVersionId] > 1
+    const isRemoteNeedUpload = syncState[kSyncVersionId] - syncState[kSyncRemoteVersionId] > 0
+    const {
+        [kProcessing]: isProcessing = false,
+        [kOriginalSyncPack]: originalSyncPack,
+        [kMarkedTreeForReview]: markedTree
+    } = localState;
+
+    return {
+        isSameVersion,
+        isEasyMerge,
+        isConflict,
+        isProcessing,
+        isRemoteNeedUpload,
+
+        originalSyncPack,
+        markedTree,
+        updateMarkedTree,
+    }
+
 }

@@ -19,7 +19,7 @@ import { BaseOptionType } from 'antd/lib/select';
 import { kSyncFolderId, Pages } from '../../constants/kv';
 import Home from './pages/Home';
 import Setting from './pages/Setting';
-
+import { useSyncRunning } from './pages/hooks'
 const { Content, Footer, Header, Sider } = Layout;
 
 interface Props {
@@ -42,10 +42,10 @@ const menus = [
 const Options: React.FC<Props> = () => {
   const [page, setPage] = React.useState('home');
 
+
   return (
     <Layout hasSider style={{ minHeight: '100vh' }}>
       <Sider collapsible>
-        <div className="logo">Hello World</div>
         <Menu
           theme="dark"
           onSelect={(e) => {
@@ -54,7 +54,7 @@ const Options: React.FC<Props> = () => {
           selectedKeys={[page]}
           items={menus}
           mode="inline"
-          // items={items}
+        // items={items}
         />
       </Sider>
       {page === Pages.Home && <Home />}
