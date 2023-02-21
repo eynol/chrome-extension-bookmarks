@@ -18,10 +18,13 @@ export enum ExtState {
 
 export enum ExtActions {
     'override' = 'override',
+    'walkmarkedTree' = 'walkMarkedTree',
+
     'pauseSync' = 'pauseSync',
     'resumeSync' = 'resumeSync',
 
     'isInterlvalExist' = 'isInterlvalExist',
+    'regenerateMarkedTree' = 'regenerateMarkedTree'
 }
 
 export enum SyncState {

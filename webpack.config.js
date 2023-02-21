@@ -68,6 +68,9 @@ var options = {
             loader: 'less-loader',
             options: {
               sourceMap: true,
+              lessOptions: {
+                javascriptEnabled: true
+              }
             },
           },
         ],

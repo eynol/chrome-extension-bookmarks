@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import './Options.css';
+import 'antd/dist/reset.css';
 import {
   Button,
   Tree,
@@ -8,6 +9,7 @@ import {
   Layout,
   Menu,
   TreeSelect,
+  theme,
 } from 'antd';
 import {
   DashboardOutlined,
@@ -41,13 +43,17 @@ const menus = [
 
 const Options: React.FC<Props> = () => {
   const [page, setPage] = React.useState('home');
+  const {
+    token: { colorBgContainer },
+  } = theme.useToken();
 
 
   return (
     <Layout hasSider style={{ minHeight: '100vh' }}>
-      <Sider collapsible>
+      <Sider collapsible theme='light'>
         <Menu
-          theme="dark"
+          theme="light"
+          // theme="auto"
           onSelect={(e) => {
             setPage(e.key);
           }}

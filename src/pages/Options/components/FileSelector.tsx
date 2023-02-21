@@ -1,15 +1,20 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react'
+import React, { useImperativeHandle, useState, useRef, useCallback } from 'react'
 
 
 
-const FileSelectorWraper: React.FC<{
+const FileSelectorWraper = React.forwardRef<{ click: () => void }, {
     onChange: (file: File) => void,
     children?: React.ReactElement;
-}> = (props) => {
+}>((props, ref) => {
     const inputRef = useRef<HTMLInputElement>(null);
     const handleClicked = useCallback(() => {
         inputRef.current?.click();
     }, [])
+
+    useImperativeHandle(ref, () => ({
+        click: handleClicked
+    }))
+
     const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files?.length) {
             props.onChange(e.target.files[0]);
@@ -20,13 +25,13 @@ const FileSelectorWraper: React.FC<{
 
     return <>
         <input ref={inputRef} onChange={handleChange} type="file" hidden></input>
-        {React.Children.only(props.children) &&
+        {props.children && React.Children.only(props.children) &&
             props.children &&
             React.cloneElement(props.children, {
                 onClick: handleClicked,
             })}
     </>
-};
+});
 
 FileSelectorWraper.displayName = 'FileSelectorWraper'
 export default FileSelectorWraper;

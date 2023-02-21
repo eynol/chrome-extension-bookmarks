@@ -1,5 +1,5 @@
 import { ExtActions, kExtensionState, kMarkedTreeForReview, kOriginalSyncPack, kProcessing, kSyncRemoteVersionId, kSyncVersionId } from '../../constants/kv';
-import { getMarkedTree, restoreSyncPack } from '../../actions/restoreSyncPack'
+import { getMarkedTree, restoreSyncPack, walkMarkedTree } from '../../actions/restoreSyncPack'
 import { ActionUI } from '../../actions/chromeAction'
 
 async function getRemoteVersion() {
@@ -121,7 +121,13 @@ const eventListender = async (message, sender, sendResponse) => {
         } catch (e) {
             sendResponse({ done: true, error: e });
         }
-
+    } else if (message === ExtActions.walkmarkedTree) {
+        try {
+            await overrideBookmarksWithMarkedTree()
+            sendResponse({ done: true });
+        } catch (e) {
+            sendResponse({ done: true, error: e });
+        }
     } else if (message === ExtActions.isInterlvalExist) {
         if (typeof fetchRemoteConfigInterval === 'number') {
             sendResponse({ running: true });
@@ -140,6 +146,10 @@ const eventListender = async (message, sender, sendResponse) => {
             fetchRemoteConfigInterval = undefined;
         }
         ActionUI.yellow('暂停')
+    } else if (message === ExtActions.regenerateMarkedTree) {
+        const { [kOriginalSyncPack]: originalSyncPack } = await chrome.storage.local.get(kOriginalSyncPack)
+        const markedTree = await getMarkedTree(originalSyncPack)
+        chrome.storage.local.set({ [kMarkedTreeForReview]: markedTree })
     }
 }
 chrome.runtime.onMessage.addListener(eventListender);
@@ -157,6 +167,20 @@ async function overrideBookmarks() {
         await chrome.storage.local.set({ [kProcessing]: false },)
 
 
+    }
+}
+
+async function overrideBookmarksWithMarkedTree() {
+    const { [kMarkedTreeForReview]: markedTree } = await chrome.storage.local.get(kMarkedTreeForReview)
+    console.log('overrideBookmarksWithMarkedTree use markedTree', markedTree);
+    if (markedTree) {
+        const processing = await chrome.storage.local.get(kProcessing)
+        if (processing[kProcessing]) {
+            return;
+        }
+        await chrome.storage.local.set({ [kProcessing]: true },)
+        await walkMarkedTree(markedTree)
+        await chrome.storage.local.set({ [kProcessing]: false },)
     }
 }
 
