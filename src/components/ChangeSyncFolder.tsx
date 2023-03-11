@@ -2,7 +2,7 @@ import { useToggle } from 'ahooks';
 import { Modal, Tree, TreeSelect } from 'antd';
 import { DefaultOptionType } from 'antd/lib/select';
 import React, { useEffect, useImperativeHandle, useState } from 'react';
-import { useBookmarksTree } from '../pages/hooks';
+import { useBookmarksTree } from '../hooks';
 
 export const bookmarksToFolderData = (treeData: any[]): DefaultOptionType[] => {
   return treeData

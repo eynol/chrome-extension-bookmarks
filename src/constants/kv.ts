@@ -5,9 +5,9 @@ export const kSyncRemoteVersionId = 'sync_remote_version_id';
 
 export const kExtensionState = 'local_extension_state';
 export const kOriginalSyncPack = 'local_original-sync-pack';
-export const kMarkedTreeForReview = 'local_marked-tree-for-review';
 
 
+export const kUploadTask = 'upload_task';
 export const kProcessing = 'processing';
 
 export enum ExtState {
@@ -23,6 +23,8 @@ export enum ExtActions {
     'pauseSync' = 'pauseSync',
     'resumeSync' = 'resumeSync',
 
+    'getBackgroundState' = 'getBackgroundState',
+    'changeBackgroundState' = 'changeBackgroundState',
     'isInterlvalExist' = 'isInterlvalExist',
     'regenerateMarkedTree' = 'regenerateMarkedTree'
 }

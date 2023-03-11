@@ -13,10 +13,15 @@ const is = {
 /** merge source to target */
 export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeNode,) => {
 
-    const { children: targetChildren, } = target;
-    const { children: sourceChildren, ...restSource } = source;
+    const { children: targetChildren, title, } = target;
+    const { children: sourceChildren, title: sourceTitle, ...restSource } = source;
     Object.assign(target, restSource)
+    target.title = title;
+
     if (is.urlLink(target)) {
+        if (sourceTitle !== title) {
+            target.renamed = true
+        }
         return target
     }
     // if target has no children, just replace it
@@ -65,14 +70,22 @@ export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeN
         // }
 
         else if (is.sameNode(targetLeftNode, sourceLeftNode)) {
+            if (targetLeftNode.title !== sourceLeftNode.title) {
+                targetLeftNode.renamed = true
+            }
+
             mergeTwoTreeMark(targetLeftNode, sourceLeftNode);
             if (targetLeft !== sourceLeft) {
                 targetLeftNode.ordered = true
             }
+
             targetLeftNode = targetChildren[++targetLeft];
             sourceLeftNode = sourceChildren[++sourceLeft];
         }
         else if (is.sameNode(targetRightNode, sourceRightNode)) {
+            if (targetRightNode.title !== sourceRightNode.title) {
+                targetRightNode.renamed = true
+            }
             mergeTwoTreeMark(targetRightNode, sourceRightNode);
             if (targetRight !== sourceRight) {
                 targetRightNode.ordered = true
@@ -81,7 +94,9 @@ export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeN
             targetRightNode = targetChildren[--targetRight];
             sourceRightNode = sourceChildren[--sourceRight];
         } else if (is.sameNode(targetLeftNode, sourceRightNode)) {
-
+            if (targetLeftNode.title !== sourceRightNode.title) {
+                targetLeftNode.renamed = true
+            }
             mergeTwoTreeMark(targetLeftNode, sourceRightNode);
             if (targetLeft !== sourceRight) {
                 targetLeftNode.ordered = true;
@@ -91,6 +106,9 @@ export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeN
             targetLeftNode = targetChildren[++targetLeft];
             sourceRightNode = sourceChildren[--sourceRight];
         } else if (is.sameNode(targetRightNode, sourceLeftNode)) {
+            if (targetRightNode.title !== sourceLeftNode.title) {
+                targetRightNode.renamed = true
+            }
             mergeTwoTreeMark(targetRightNode, sourceLeftNode);
             if (targetRight !== sourceLeft) {
                 targetRightNode.ordered = true;
@@ -106,6 +124,9 @@ export const mergeTwoTreeMark = (target: EditedChromeNode, source: EditedChromeN
                 const tempSourceNode = sourceChildren[tempSourceLeft];
                 if (tempSourceNode && !foundLeft && is.sameNode(targetLeftNode, tempSourceNode)) {
                     foundLeft = true;
+                    if (targetLeftNode.title !== tempSourceNode.title) {
+                        targetLeftNode.renamed = true
+                    }
                     mergeTwoTreeMark(targetLeftNode, tempSourceNode);
                     // console.log('ordered between', targetLeftNode)
                     targetLeftNode.ordered = true;

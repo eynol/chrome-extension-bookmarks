@@ -82,7 +82,7 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ version: app.getVersion() }));
     } else if (reqUrl.pathname === '/config' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-        res.end(JSON.stringify(app.getConfig()));
+	fs.createReadStream(FILE_CONFIG).pipe(res)
     } else if (reqUrl.pathname === '/version' && req.method === 'POST') {
         handleRequestBody(req, (data) => {
             try {

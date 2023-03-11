@@ -30,6 +30,9 @@ export const mergeSameNameOrSameUrlInSyncFolder = async () => {
         },
         ordered: async function ({ currentNode }): Promise<EditedChromeNode> {
             throw new Error("Function not implemented.");
+        },
+        renamed: async function ({ currentNode }): Promise<EditedChromeNode> {
+            throw new Error("Function not implemented.");
         }
     }, [])
 

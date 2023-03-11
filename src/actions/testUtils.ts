@@ -3,6 +3,7 @@ import { EditedChromeNode } from "../interfaces"
 export const NEW = { created: true };
 export const ORDER = { ordered: true };
 export const DEL = { removed: true };
+export const RENAME = { renamed: true };
 
 export function gen(title: string, childrenOrUrl?: any[] | string, props?: Record<string, any>) {
     if (childrenOrUrl && typeof childrenOrUrl === 'string') {

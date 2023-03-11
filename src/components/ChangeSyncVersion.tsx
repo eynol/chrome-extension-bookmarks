@@ -2,7 +2,7 @@ import { useToggle } from 'ahooks';
 import { Input, InputNumber, Modal, Space, TreeSelect } from 'antd';
 import { DefaultOptionType } from 'antd/lib/select';
 import React, { useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { useBookmarksTree, useSyncVersion } from '../pages/hooks';
+import { useBookmarksTree, useSyncVersion } from '../hooks';
 
 
 export default React.forwardRef(function ChangeSyncVersion(

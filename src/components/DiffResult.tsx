@@ -2,17 +2,20 @@ import { Alert, Button, Card, Col, Descriptions, Popconfirm, Result, Row, Space,
 import { PageHeader } from '@ant-design/pro-layout'
 import { DataNode } from "antd/lib/tree";
 import React, { CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getMarkedTree } from "../../../actions/restoreSyncPack";
-import { EditedChromeNode } from "../../../interfaces";
-import { useConfilictStatus, useProcessing, useSyncVersion } from "../pages/hooks";
+import { getMarkedTree } from "../actions/restoreSyncPack";
+import { EditedChromeNode } from "../interfaces";
+import { useConfilictStatus, useProcessing, useSyncVersion } from "../hooks";
 import { FolderOutlined } from "@ant-design/icons";
-import { ExtActions, kSyncVersionId } from "../../../constants/kv";
+import { ExtActions, kSyncVersionId } from "../constants/kv";
 
 
 const redStyle: CSSProperties = {
     color: 'red'
 }
 const greenStyle: CSSProperties = {
+    color: 'green',
+}
+const yellowStyle: CSSProperties = {
     color: 'green',
 }
 const nodeTreeTitleRender = (node: EditedChromeNode) => {
@@ -24,9 +27,25 @@ export const DiffResult: React.FC = () => {
     const processing = useProcessing()
     const { isSameVersion, isEasyMerge, isConflict, isRemoteNeedUpload, isProcessing, originalSyncPack, markedTree, updateMarkedTree } = useConfilictStatus()
     const [selectedKeys, setSelectedKeys] = React.useState<string[]>([]);
-    const forceUpdateCountRef = useRef(0)
-    const markedTreeClone = useMemo(() => JSON.parse(JSON.stringify(markedTree ?? {})), [markedTree]);
+    const forceUpdateCountRef = useRef(0);
+
+    const regenerateMarkedTree = useCallback(async () => {
+        setSelectedKeys([]);
+        forceUpdateCountRef.current += 1;
+    }, [])
+    useEffect(() => {
+        regenerateMarkedTree()
+    }, [markedTree])
+
+    const markedTreeClone = useMemo(() => {
+        console.log('update marked tree in diff', markedTree)
+        return JSON.parse(JSON.stringify(markedTree ?? {}))
+    }, [markedTree]);
+    /**
+     * Only remain the used node, and generate the idMapRelation
+     */
     const [localFilterdTreeData, idMapRelation] = useMemo(() => {
+
         const idMap = new Map<string, EditedChromeNode>();
         if (!markedTree) return [[], idMap];
         const transform = (node: EditedChromeNode, paths: string[] = [], index: number): undefined | DataNode & {
@@ -63,13 +82,9 @@ export const DiffResult: React.FC = () => {
             }
         }
         return [[transform(markedTreeClone, [], 0)].filter((x): x is DataNode => !!x), idMap] as const
-    }, [markedTree])
+    }, [markedTree, markedTreeClone])
 
-    const regenerateMarkedTree = useCallback(async () => {
-        setSelectedKeys([]);
-        forceUpdateCountRef.current += 1;
-        await chrome.runtime.sendMessage(ExtActions.regenerateMarkedTree)
-    }, [])
+
 
     const treeKey = useMemo(() => Date.now().toString(), [localFilterdTreeData, forceUpdateCountRef.current])
     const defaultExpandedKeys = useMemo(() => {
@@ -89,29 +104,35 @@ export const DiffResult: React.FC = () => {
         return expandedKeys
     }, [localFilterdTreeData])
 
-    console.log(localFilterdTreeData, markedTree, selectedKeys, idMapRelation, markedTreeClone)
     const isReady = isRemoteNeedUpload || isSameVersion || isEasyMerge || (isConflict && originalSyncPack && markedTree);
-    useEffect(() => {
-        if (originalSyncPack && !markedTree) {
-            // init modifiedRecord
-            getMarkedTree(originalSyncPack).then((record) => {
-                updateMarkedTree(record)
-            })
-        }
-    }, [originalSyncPack, markedTree])
 
-    useEffect(() => {
-        if (markedTree) {
-            console.log('markedTree', markedTree)
-        }
-    }, [markedTree])
+
 
     const confirmResolveConflict = useCallback(() => {
         if (selectedKeys.length === 0) {
-            chrome.storage.sync.set({ [kSyncVersionId]: remoteSyncVersion })
-            chrome.runtime.sendMessage(ExtActions.walkmarkedTree)
+            // chrome.storage.sync.set({ [kSyncVersionId]: remoteSyncVersion })
+            chrome.runtime.sendMessage({
+                type: ExtActions.walkmarkedTree,
+                kind: 'forward',
+                nextVersionId: remoteSyncVersion,
+                markedTree: markedTreeClone,
+            })
         } else {
-            alert('todo')
+
+            selectedKeys.forEach(key => {
+                const node = idMapRelation.get(key);
+                if (node) {
+                    node.created = false;
+                    node.removed = false;
+                }
+            })
+
+            chrome.runtime.sendMessage({
+                type: ExtActions.walkmarkedTree,
+                kind: 'merged-update',
+                nextVersionId: remoteSyncVersion,
+                markedTree: markedTreeClone,
+            })
         }
 
     }, [selectedKeys])
@@ -131,7 +152,7 @@ export const DiffResult: React.FC = () => {
     if (isConflict) {
 
         return (
-            <Card title="解决冲突" loading={processing}>
+            <Card loading={processing} size="small">
                 <Row gutter={[8, 6]}>
                     <Col span={24}>
                         <PageHeader
@@ -139,7 +160,7 @@ export const DiffResult: React.FC = () => {
                             ghost={true}
                             // onBack={() => window.history.back()}
                             title="解决冲突"
-                            subTitle="Resolve Conflict"
+                            // subTitle="Resolve Conflict"
                             extra={[
                                 // <Dropdown menu={{ items, onClick: onClickDropdown }}>
                                 //   <a onClick={e => e.preventDefault()}>
@@ -174,12 +195,14 @@ export const DiffResult: React.FC = () => {
 
                     <Col span={24}>
                         <Tree showLine showIcon
-
                             key={treeKey}
                             selectedKeys={selectedKeys}
                             defaultSelectedKeys={selectedKeys}
                             defaultExpandedKeys={defaultExpandedKeys}
-                            style={{ height: '50vh', overflow: 'auto' }}
+                            rootStyle={{
+                                overflow: 'auto'
+                            }}
+                            style={{ height: '50vh', minWidth: 1000, }}
                             onCheck={(keys) => {
                                 setSelectedKeys(keys as string[])
                             }}

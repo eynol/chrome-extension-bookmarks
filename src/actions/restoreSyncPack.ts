@@ -3,19 +3,20 @@ import { isSameFolderByChildren } from "./isSameFolderByChildren";
 import { mergeTwoTreeMark } from './mergeTwoTree'
 import { singleTreeWalker } from './markTreeWalker'
 import { EditedChromeNode } from "../interfaces";
+const clone = (a: any) => JSON.parse(JSON.stringify(a));
 
-export const getMarkedTree = async (syncPack: SyncPackNode) => {
+export const getMarkedTree = async (syncPack: SyncPackNode, bookmarksLocal?: chrome.bookmarks.BookmarkTreeNode[]) => {
     const { [kSyncFolderId]: syncFolderId } = await chrome.storage.sync.get(kSyncFolderId)
-    const bookmarks: chrome.bookmarks.BookmarkTreeNode[] = await chrome.bookmarks.getSubTree(syncFolderId);
+    const bookmarks: chrome.bookmarks.BookmarkTreeNode[] = bookmarksLocal ?? await chrome.bookmarks.getSubTree(syncFolderId);
     const root = bookmarks[0];
-    const markedTree = mergeTwoTreeMark(syncPack, root)
+    const markedTree = mergeTwoTreeMark(clone(syncPack), clone(root))
     return markedTree;
 }
 
 
 export const walkMarkedTree = async (markedTree: SyncPackNode) => {
     await singleTreeWalker(markedTree, {
-        async created({ currentNode, parent, order }) {
+        created: async ({ currentNode, parent, order }) => {
             const createdNode = await chrome.bookmarks.create({
                 parentId: parent?.id,
                 index: order,
@@ -34,6 +35,9 @@ export const walkMarkedTree = async (markedTree: SyncPackNode) => {
         },
         ordered: async function ({ currentNode, parent, order }): Promise<EditedChromeNode> {
             return await chrome.bookmarks.move(currentNode.id!, { parentId: parent!.id, index: order })
+        },
+        renamed: async function ({ currentNode, parent, order }): Promise<EditedChromeNode> {
+            return await chrome.bookmarks.update(currentNode.id!, { title: currentNode.title })
         }
     }, [])
 }

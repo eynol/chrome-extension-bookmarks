@@ -1,39 +1,28 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import {
-  Button,
-  Tree,
-  Modal,
-  TreeDataNode,
-  Layout,
-  Menu,
-  TreeSelect,
-  Spin,
-  Result,
-  Space,
-  Card,
-  Dropdown,
+  Button, Layout, Result,
+  Space, Dropdown,
   MenuProps,
-  message,
-  Divider,
-  BackTop,
+  message, FloatButton,
   Descriptions,
   Tag,
+  Modal,
+  Input,
+  InputRef
 } from 'antd';
-import { ExtActions, kOriginalSyncPack, kProcessing, kSyncFolderId } from '../../../constants/kv';
+import { ExtActions, kProcessing } from '../../../constants/kv';
 import { DataNode } from 'antd/lib/tree';
 
-import ChangeSyncFolder, {
-  bookmarksToFolderData,
-} from '../components/ChangeSyncFolder';
+import ChangeSyncFolder from '../../../components/ChangeSyncFolder';
 import { generateSyncPack } from '../../../actions/generateSyncPack';
-import { useBookmarksTree, useProcessing, useSyncFolderId, useSyncRunning, useSyncVersion } from './hooks';
-import FileSelectorWraper from '../components/FileSelector';
+import { useBackgroundState, useProcessing, useSyncFolderId, useSyncRunning, useSyncVersion } from '../../../hooks';
+import FileSelectorWraper from '../../../components/FileSelector';
 import { mergeSameNameOrSameUrlInSyncFolder } from '../../../actions/mergeSameNameOrSameUrlInSyncFolder';
-import { DownOutlined, EditFilled, EditOutlined, EditTwoTone, PauseCircleFilled, PlaySquareFilled } from '@ant-design/icons';
-import ChangeSyncVersion from '../components/ChangeSyncVersion';
-import { DiffResult } from '../components/DiffResult';
+import { DownOutlined, EditFilled, PauseCircleFilled, PlaySquareFilled } from '@ant-design/icons';
+import ChangeSyncVersion from '../../../components/ChangeSyncVersion';
+import { DiffResult } from '../../../components/DiffResult';
 import { PageHeader } from '@ant-design/pro-layout';
-
+const BackTop = FloatButton.BackTop;
 const bookmarksToTreeData = (treeData: any[]): DataNode[] => {
   return treeData.map((item) => {
     const { children, title, id, ...rest } = item;
@@ -47,42 +36,6 @@ const bookmarksToTreeData = (treeData: any[]): DataNode[] => {
 message.config({ duration: 3 })
 const { Content, Footer, Header, Sider } = Layout;
 
-enum homeStateActionType {
-  setSyncFolderId,
-  setBookmarks,
-  clearSyncFolderId,
-}
-
-const homeStateReducer = (state: any, action: any) => {
-  switch (action.type) {
-    case homeStateActionType.setSyncFolderId: {
-      return {
-        ...state,
-        syncFolderIdLoaded: true,
-        syncFolderId: action.payload,
-      };
-    }
-    case homeStateActionType.setBookmarks: {
-      let originTreeData = action.payload;
-      if (originTreeData?.length > 0) {
-        originTreeData[0].title = 'Bookmarks';
-      }
-      const bookmarks = bookmarksToTreeData(originTreeData);
-      const folders = bookmarksToFolderData(originTreeData);
-      console.log({ bookmarks, folders });
-      return {
-        ...state,
-        rawBookmarks: originTreeData,
-        folders,
-        bookmarks,
-      };
-    }
-    default:
-      return state;
-  }
-};
-
-
 
 
 export default function Home() {
@@ -93,23 +46,7 @@ export default function Home() {
   const processing = useProcessing();
   const fileSelectorRef = useRef<{ click: () => void }>(null)
 
-  const [{ folders, bookmarks }, dispatch] =
-    React.useReducer(homeStateReducer, {
-      bookmarks: [],
-      folders: [],
-      syncFolderIdLoaded: false,
-      syncFolderId: '',
-    });
-
-  const tree = useBookmarksTree()
-  useEffect(() => {
-    console.log('tree changed', tree)
-    dispatch({
-      type: homeStateActionType.setBookmarks,
-      payload: tree,
-    });
-  }, [tree]);
-
+  const backgroundState = useBackgroundState();
   const onClickDropdown: MenuProps['onClick'] = async ({ key }) => {
     // 下载同步文件
     switch (key) {
@@ -156,16 +93,73 @@ export default function Home() {
         await chrome.runtime.sendMessage(ExtActions.resumeSync)
         break
       }
+      case 'notification-on': {
+        await chrome.runtime.sendMessage({
+          type: ExtActions.changeBackgroundState,
+          state: {
+            showNotification: true
+          }
+        })
+        break
+      }
+      case 'notification-off': {
+        await chrome.runtime.sendMessage({
+          type: ExtActions.changeBackgroundState,
+          state: {
+            showNotification: false
+          }
+        })
+        break
+      }
+
       default: {
         break;
       }
     }
-    message.success('done')
+    if (key !== 'upload-snapshot') {
+      message.success('done')
+    }
 
   };
 
+  const handleChangeRemoteHost = (remoteHost: string) => {
+    const ref = React.createRef<InputRef>();
+    Modal.confirm({
+      title: '修改远程主机地址',
+      content: <Input ref={ref} defaultValue={remoteHost} />,
+      onOk: () => {
+        let url = ref.current?.input?.value
+        if (!url) {
+          message.error('请输入远程主机地址');
+          return
+        }
+
+        try {
+          url = new URL(url).toString();
+          chrome.runtime.sendMessage({
+            type: ExtActions.changeBackgroundState,
+            state: {
+              syncRemoteHost: url
+            }
+          }, () => {
+            message.success('修改成功')
+          })
+        } catch (e) {
+          message.error('请输入正确的远程主机地址');
+          return;
+        }
+
+      },
+      onCancel: () => {
+        console.log('cance')
+      }
+    })
+  }
 
   const items: MenuProps['items'] = [
+    !backgroundState.showNotification
+      ? { label: '开启通知提醒', key: 'notification-on', disabled: !syncFolderId }
+      : { label: '关闭通知提醒', key: 'notification-off', disabled: !syncFolderId },
     { type: 'divider' },
     { label: '合并同步文件夹内的相同目录', key: 'merge-sync-folder', disabled: !syncFolderId },
     { label: '下载快照', key: 'download-snapshot', disabled: !syncFolderId },
@@ -205,67 +199,79 @@ export default function Home() {
 
   return (
     <Layout>
-      <Content>
-        <PageHeader
-          tags={[
-            running ? <Tag color="green">Watching</Tag> : <Tag color="red">暂停</Tag>,
-            processing && <Tag color="blue">合并收藏夹中</Tag>,
-          ]}
-          ghost={false}
-          // onBack={() => window.history.back()}
-          title="状态 / STATUS"
-          // subTitle="This is a subtitle"
-          extra={[
-            <Dropdown menu={{ items, onClick: onClickDropdown }}>
-              <a onClick={e => e.preventDefault()}>
-                <Space>
-                  更多操作
-                  <DownOutlined />
-                </Space>
-              </a>
-            </Dropdown>,
-            <Button key="2">Operation</Button>,
-            <Button key="1" type="primary">
-              Primary
-            </Button>,
-          ]}
-        >
-          <FileSelectorWraper
-            ref={fileSelectorRef}
-            onChange={(file) => {
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const data = JSON.parse(reader.result as string);
-                chrome.storage.local.set({ [kOriginalSyncPack]: data }).then(() => {
-                  chrome.runtime.sendMessage(ExtActions.override)
-                })
-                // restoreSyncPack(data)
-              };
-              reader.readAsText(file);
-              console.log(file)
-            }} />,
-          <Descriptions size="small" column={3}>
-            <Descriptions.Item label="当前同步收藏夹">
-              {syncFolderName}
-              <ChangeSyncFolder
-                value={syncFolderId}
-                onChange={setSyncFolderId}
-              >
-                <EditFilled />
-              </ChangeSyncFolder>
-            </Descriptions.Item>
-            <Descriptions.Item label="版本号" > 本地-{syncVersion} / 服务器-{remoteSyncVersion} <ChangeSyncVersion ><EditFilled /></ChangeSyncVersion> </Descriptions.Item>
-            <Descriptions.Item label="发现最新版本号">{remoteSyncVersion}</Descriptions.Item>
-            {/* <Descriptions.Item label="Effective Time">2017-10-10</Descriptions.Item>
+
+      <PageHeader
+        tags={[
+          running ? <Tag key="watching" color="green">Watching</Tag> : <Tag key="paused" color="red">暂停</Tag>,
+          processing && <Tag key="processing" color="blue">合并收藏夹中</Tag>,
+        ]}
+        ghost={false}
+        // onBack={() => window.history.back()}
+        title="STATUS"
+        // subTitle="This is a subtitle"
+        extra={[
+          <Dropdown key="dropmenu" menu={{ items, onClick: onClickDropdown }}>
+            <Button key="2">更多操作</Button>
+          </Dropdown>,
+          <Button key="1"
+            onClick={() => onClickDropdown({ key: running ? 'pause-sync' : 'resume-sync' } as any)}
+            icon={running ? <PauseCircleFilled /> : <PlaySquareFilled />} type="primary">
+            {running
+              ? <>暂停同步</> //{ label: '', icon: <PauseCircleFilled />, key: 'pause-sync' }
+              : <>开始同步</>//{ label: '开始同步', icon: <PlaySquareFilled />, key: 'resume-sync' },
+            }
+          </Button>,
+        ]}
+      >
+        <FileSelectorWraper
+          ref={fileSelectorRef}
+          onChange={(file) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+              const data = JSON.parse(reader.result as string);
+
+              chrome.runtime.sendMessage({
+                type: ExtActions.override,
+                data: data,
+              }, (resp: { done: boolean, error?: Error }) => {
+                if (resp.error) {
+                  message.error(resp.error?.message)
+                } else {
+                  message.success('merged')
+                }
+              })
+
+              // restoreSyncPack(data)
+            };
+            reader.readAsText(file);
+            console.log(file)
+          }} />,
+        <Descriptions size="small" column={{
+          md: 3,
+          sm: 1
+        }}>
+          <Descriptions.Item label="当前同步收藏夹">
+            {syncFolderName}
+            <ChangeSyncFolder
+              value={syncFolderId}
+              onChange={setSyncFolderId}
+            >
+              <EditFilled />
+            </ChangeSyncFolder>
+          </Descriptions.Item>
+          <Descriptions.Item label="版本号" > 本地-{syncVersion} / 服务器-{remoteSyncVersion} <ChangeSyncVersion ><EditFilled /></ChangeSyncVersion> </Descriptions.Item>
+          <Descriptions.Item label="发现最新版本号">{remoteSyncVersion}</Descriptions.Item>
+          <Descriptions.Item label="服务器地址">{backgroundState.syncRemoteHost} <EditFilled onClick={() => handleChangeRemoteHost(backgroundState.syncRemoteHost)} /></Descriptions.Item>
+          {/* <Descriptions.Item label="Effective Time">2017-10-10</Descriptions.Item>
             <Descriptions.Item label="Remarks">
               Gonghu Road, Xihu District, Hangzhou, Zhejiang, China
             </Descriptions.Item> */}
-          </Descriptions>
-        </PageHeader>
-        <DiffResult></DiffResult>
-        <BackTop />
+        </Descriptions>
+      </PageHeader>
+      <DiffResult></DiffResult>
+      <BackTop />
 
-      </Content>
+
     </Layout>
   );
 }

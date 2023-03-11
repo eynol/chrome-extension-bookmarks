@@ -1,5 +1,5 @@
 import { mergeTwoTreeMark } from './mergeTwoTree'
-import { gen, NEW, ORDER, DEL } from './testUtils';
+import { gen, NEW, ORDER, DEL, RENAME } from './testUtils';
 
 
 
@@ -82,6 +82,28 @@ describe('merge props', () => {
         );
     })
 })
+describe('rename node', () => {
+    it('should rename node', () => {
+        expect(mergeTwoTreeMark(
+            gen('1', [
+                gen('3-new', []),
+                gen('2-rename', 'url1'),
+            ]),
+            gen('1', [
+                gen('2', []),
+                gen('2', 'url1'),
+                gen('xxx', 'url33')
+            ]),
+        )).toEqual(
+            gen('1', [
+                gen('3-new', [], NEW),
+                gen('2-rename', 'url1', { ...RENAME, ...ORDER }),
+                gen('2', [], DEL),
+                gen('xxx', 'url33', DEL)
+            ]),
+        );
+    })
+})
 
 
 describe('create node', () => {
@@ -101,6 +123,29 @@ describe('create node', () => {
                 gen('FOLDER 1', [], NEW),
                 gen('FOLDER 2', [], NEW),
                 gen('FOLDER 3', [], NEW),
+                gen('OLD FOLDER', [], DEL),
+
+            ])
+        );
+    })
+    test('create element at level 1', () => {
+        const result = mergeTwoTreeMark(
+            gen('1', [
+                gen('FOLDER 1', []),
+                gen('URL1 newTitle', 'url1'),
+                gen('FOLDER 3', []),
+            ]),
+            gen('1', [
+                gen('FOLDER 1', []),
+                gen('URL1', 'url1'),
+                gen('FOLDER 3', []),
+                gen('OLD FOLDER', []),
+            ]));
+        expect(result).toEqual(
+            gen('1', [
+                gen('FOLDER 1', []),
+                gen('URL1 newTitle', 'url1', RENAME),
+                gen('FOLDER 3', [],),
                 gen('OLD FOLDER', [], DEL),
 
             ])

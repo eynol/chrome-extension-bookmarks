@@ -11,6 +11,7 @@ export const singleTreeWalker = async (node: EditedChromeNode, editor: {
     created: (ctx: WalkerEnv) => Promise<EditedChromeNode>,
     removed: (ctx: WalkerEnv) => Promise<EditedChromeNode>,
     ordered: (ctx: WalkerEnv) => Promise<EditedChromeNode>,
+    renamed: (ctx: WalkerEnv) => Promise<EditedChromeNode>,
 }, paths: string[]) => {
 
     if ((node.children?.length || -1) > 0) {
@@ -42,43 +43,8 @@ export const singleTreeWalker = async (node: EditedChromeNode, editor: {
                     paths: paths
                 })
                 await singleTreeWalker(child, editor, [...paths, child.title!])
-            } else {
-                await singleTreeWalker(child, editor, [...paths, child.title!])
-            }
-
-        }
-    }
-}
-
-export const markedTreeAndRealTreeWalker = async (node: EditedChromeNode,
-    editor: {
-        created: (ctx: WalkerEnv) => Promise<EditedChromeNode>,
-        removed: (ctx: WalkerEnv) => Promise<EditedChromeNode>,
-        ordered: (ctx: WalkerEnv) => Promise<EditedChromeNode>,
-    },
-    paths: string[]) => {
-
-    if ((node.children?.length || -1) > 0) {
-        for (let i = 0; i < node.children!.length; i++) {
-            const child = node.children![i];
-            if (child.removed) {
-                await editor.removed({
-                    currentNode: child,
-                    parent: node,
-                    order: i,
-                    paths: paths
-                })
-
-            } else if (child.created) {
-                await editor.created({
-                    currentNode: child,
-                    parent: node,
-                    order: i,
-                    paths: paths
-                })
-                await singleTreeWalker(child, editor, [...paths, child.title!])
-            } else if (child.ordered) {
-                await editor.ordered({
+            } else if (child.renamed) {
+                await editor.renamed({
                     currentNode: child,
                     parent: node,
                     order: i,
