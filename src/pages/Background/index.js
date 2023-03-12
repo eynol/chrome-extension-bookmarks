@@ -1,3 +1,4 @@
+import * as chrome from "webextension-polyfill";
 
 import {
     ExtActions,
@@ -52,10 +53,10 @@ async function updateRemoteConfig(params) {
 
 
 // init processing state
-chrome.storage.sync.get(kSyncFolderId, ({ [kSyncFolderId]: syncFolderId }) => {
+chrome.storage.sync.get(kSyncFolderId).then(({ [kSyncFolderId]: syncFolderId }) => {
     globalState.syncFolderId = syncFolderId;
 });
-chrome.storage.local.get([kProcessing], (result) => {
+chrome.storage.local.get([kProcessing]).then((result) => {
     globalState.processing = result[kProcessing] || false;
 })
 
@@ -210,7 +211,7 @@ const isMessage = (message, type) => {
         return message.type === type
     }
 }
-const eventListender = async (message, sender, sendResponse) => {
+const eventListender = async (message, sender) => {
     if (message !== ExtActions.isInterlvalExist && message !== ExtActions.getBackgroundState) {
         console.log(sender, 'message', message)
     }
@@ -218,15 +219,15 @@ const eventListender = async (message, sender, sendResponse) => {
         try {
             const { data: syncPack } = message;
             await onlyOverrideBookmarks(syncPack);
-            sendResponse({ done: true });
+            return ({ done: true });
         } catch (e) {
-            sendResponse({ done: true, error: e });
+            return ({ done: true, error: e });
         }
     } else if (isMessage(message, ExtActions.getBackgroundState)) {
-        sendResponse({ ...globalState });
+        return ({ ...globalState });
     } else if (isMessage(message, ExtActions.changeBackgroundState)) {
         Object.assign(globalState, message.state);
-        sendResponse();
+        return;
     } else if (isMessage(message, ExtActions.walkmarkedTree)) {
         try {
             if (message.kind === 'forward') {
@@ -237,15 +238,15 @@ const eventListender = async (message, sender, sendResponse) => {
                 await chrome.storage.sync.set({ [kSyncVersionId]: message.nextVersionId })
                 await takeSnapshotAndUpload(message.nextVersionId)
             }
-            sendResponse({ done: true });
+            return ({ done: true });
         } catch (e) {
-            sendResponse({ done: true, error: e });
+            return ({ done: true, error: e });
         }
     } else if (message === ExtActions.isInterlvalExist) {
         if (typeof fetchRemoteConfigInterval === 'number') {
-            sendResponse({ running: true });
+            return ({ running: true });
         } else {
-            sendResponse({ running: false });
+            return ({ running: false });
         }
     } else if (message === ExtActions.resumeSync) {
         if (typeof fetchRemoteConfigInterval === 'number') {
@@ -362,12 +363,12 @@ chrome.bookmarks.onChanged.addListener(
         console.log('onChanged', id, changeInfo);
     }
 )
-chrome.bookmarks.onChildrenReordered.addListener(
-    (id, reorderInfo) => {
-        checkShouldUpload(id)
-        console.log('onChildrenReordered', id, reorderInfo);
-    }
-)
+// chrome.bookmarks.onChildrenReordered.addListener(
+//     (id, reorderInfo) => {
+//         checkShouldUpload(id)
+//         console.log('onChildrenReordered', id, reorderInfo);
+//     }
+// )
 
 chrome.bookmarks.onRemoved.addListener(
     (id, changeInfo) => {
@@ -378,15 +379,15 @@ chrome.bookmarks.onRemoved.addListener(
     }
 )
 
-chrome.bookmarks.onImportBegan.addListener(
-    () => {
-        globalState.processing = true;
-        console.log('onImportBegan');
-    }
-)
-chrome.bookmarks.onImportEnded.addListener(
-    () => {
-        globalState.processing = false;
-        console.log('onImportEnded');
-    }
-)
+// chrome.bookmarks.onImportBegan.addListener(
+//     () => {
+//         globalState.processing = true;
+//         console.log('onImportBegan');
+//     }
+// )
+// chrome.bookmarks.onImportEnded.addListener(
+//     () => {
+//         globalState.processing = false;
+//         console.log('onImportEnded');
+//     }
+// )

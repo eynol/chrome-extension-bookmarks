@@ -1,16 +1,13 @@
-import * as chrome from "webextension-polyfill";
-
 import { useEffect, useState, useCallback, useRef } from "react"
-import { getMarkedTree } from "./actions/restoreSyncPack";
-import { ExtActions, kOriginalSyncPack, kProcessing, kSyncFolderId, kSyncRemoteVersionId, kSyncVersionId } from "./constants/kv";
-import { EditedChromeNode } from "./interfaces";
+import { getMarkedTree } from "../../../actions/restoreSyncPack";
+import { ExtActions, kOriginalSyncPack, kProcessing, kSyncFolderId, kSyncRemoteVersionId, kSyncVersionId } from "../../../constants/kv";
+import { EditedChromeNode } from "../../../interfaces";
 
 interface BackgroundState {
     processing?: boolean,
     syncFolderId?: boolean,
     gatherTimmer?: number | null,
     showNotification: boolean,
-    syncRemoteHost: string
 }
 
 
@@ -45,9 +42,8 @@ export const useChromeStorage: <T extends string>(areaName: 'local' | 'sync', ke
 
 
         const handler = (changes: {
-            [key: string]: chrome.Storage.StorageChange;
-        }, areaName: string) => {
-            /// "sync" | "local" | "managed"
+            [key: string]: chrome.storage.StorageChange;
+        }, areaName: "sync" | "local" | "managed") => {
             if (areaName === 'managed') {
                 return
             }
@@ -95,14 +91,14 @@ export const useProcessing = () => {
     return state[kProcessing];
 }
 export const useBookmarksTree = () => {
-    const [tree, setTree] = useState<chrome.Bookmarks.BookmarkTreeNode[]>([]);
+    const [tree, setTree] = useState<chrome.bookmarks.BookmarkTreeNode[]>([]);
     const processing = useProcessing();
     const getTree = useCallback(() => {
         /** if processing ,return do nothing */
         if (processing) {
             return;
         }
-        chrome.bookmarks.getTree().then((tree) => {
+        chrome.bookmarks.getTree((tree) => {
             setTree(tree)
         })
     }, [processing]);
@@ -126,7 +122,7 @@ export const useBookmarksTree = () => {
     return tree
 }
 
-const isSameTree = (a: chrome.Bookmarks.BookmarkTreeNode | undefined, b: chrome.Bookmarks.BookmarkTreeNode | undefined): boolean => {
+const isSameTree = (a: chrome.bookmarks.BookmarkTreeNode | undefined, b: chrome.bookmarks.BookmarkTreeNode | undefined): boolean => {
     if (!a && !b) {
         return true
     }
@@ -147,7 +143,7 @@ const isSameTree = (a: chrome.Bookmarks.BookmarkTreeNode | undefined, b: chrome.
 }
 
 export const useSyncFolderTree = () => {
-    const [tree, setTree] = useState<chrome.Bookmarks.BookmarkTreeNode[]>([]);
+    const [tree, setTree] = useState<chrome.bookmarks.BookmarkTreeNode[]>([]);
     const processing = useProcessing();
     const { syncFolderId } = useSyncFolderId();
     const syncFolderIdRef = useRef(syncFolderId);
@@ -160,7 +156,7 @@ export const useSyncFolderTree = () => {
             return;
         }
         if (syncFolderId) {
-            chrome.bookmarks.getSubTree(syncFolderId).then((tree) => {
+            chrome.bookmarks.getSubTree(syncFolderId, (tree) => {
                 if (syncFolderIdRef.current === syncFolderId) {
                     setTree(OriginTree => {
                         console.log('update ,sync folder tree id %s', syncFolderId, OriginTree)
@@ -182,7 +178,7 @@ export const useSyncFolderTree = () => {
         chrome.bookmarks.onCreated.addListener(getTree)
         chrome.bookmarks.onMoved.addListener(getTree)
         chrome.bookmarks.onChanged.addListener(getTree)
-        // chrome.bookmarks..addListener(getTree)
+        // chrome.bookmarks.onChildrenReordered.addListener(getTree)
         chrome.bookmarks.onRemoved.addListener(getTree)
 
         return () => {
@@ -206,7 +202,7 @@ export const useSyncFolderId = () => {
 
     useEffect(() => {
         if (syncFolderId) {
-            chrome.bookmarks.get(syncFolderId).then((result) => {
+            chrome.bookmarks.get(syncFolderId, (result) => {
                 setSyncFolderName(result[0].title)
             })
         }
@@ -223,8 +219,9 @@ export const useSyncRunning = () => {
     const [running, setRunning] = useState(false);
     useEffect(() => {
         const listener = async () => {
-            const resp: { running: boolean } = await chrome.runtime.sendMessage(chrome.runtime.id, ExtActions.isInterlvalExist)
-            setRunning(resp.running)
+            chrome.runtime.sendMessage(ExtActions.isInterlvalExist, (resp: { running: boolean }) => {
+                setRunning(resp.running)
+            })
         }
         listener();
         const timmer = setInterval(listener, 1000)
@@ -238,12 +235,12 @@ export const useSyncRunning = () => {
 export const useBackgroundState = () => {
     const [backgroundState, setBackgroundState] = useState<BackgroundState>({
         showNotification: false,
-        syncRemoteHost: '',
     });
     useEffect(() => {
         const listener = async () => {
-            const resp: BackgroundState = await chrome.runtime.sendMessage(chrome.runtime.id, ExtActions.getBackgroundState,)
-            setBackgroundState(resp)
+            chrome.runtime.sendMessage(ExtActions.getBackgroundState, (resp: BackgroundState) => {
+                setBackgroundState(resp)
+            })
         }
         listener();
         const timmer = setInterval(listener, 1000)

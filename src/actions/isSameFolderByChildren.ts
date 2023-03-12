@@ -1,7 +1,9 @@
+import * as chrome from "webextension-polyfill";
+
 import { SyncPackNode } from "../constants/kv";
 
 /**  这两个文件夹是否是相同的 */
-export function isSameFolderByChildren(syncNode: SyncPackNode, chromeNode: chrome.bookmarks.BookmarkTreeNode) {
+export function isSameFolderByChildren(syncNode: SyncPackNode, chromeNode: chrome.Bookmarks.BookmarkTreeNode) {
     //
     const { children: syncChildren = [] } = syncNode;
     const { children: chromeChildren = [] } = chromeNode;

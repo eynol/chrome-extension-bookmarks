@@ -1,3 +1,5 @@
+import * as chrome from "webextension-polyfill";
+
 import { kSyncFolderId } from "../constants/kv";
 import { mergeJsonTreeMark } from './mergeJsonTree'
 import { singleTreeWalker } from './markTreeWalker'
@@ -7,7 +9,7 @@ export const mergeSameNameOrSameUrlInSyncFolder = async () => {
     const { [kSyncFolderId]: syncFolderId } = await chrome.storage.sync.get(kSyncFolderId)
 
 
-    const [node]: chrome.bookmarks.BookmarkTreeNode[] = await chrome.bookmarks.getSubTree(syncFolderId);
+    const [node]: chrome.Bookmarks.BookmarkTreeNode[] = await chrome.bookmarks.getSubTree(syncFolderId);
 
     const markdedTree = mergeJsonTreeMark(node);
     await singleTreeWalker(markdedTree, {

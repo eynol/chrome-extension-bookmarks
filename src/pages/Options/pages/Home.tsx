@@ -85,16 +85,16 @@ export default function Home() {
         break;
       }
       case 'pause-sync': {
-        await chrome.runtime.sendMessage(ExtActions.pauseSync)
+        await chrome.runtime.sendMessage(chrome.runtime.id, ExtActions.pauseSync)
         break
       }
 
       case 'resume-sync': {
-        await chrome.runtime.sendMessage(ExtActions.resumeSync)
+        await chrome.runtime.sendMessage(chrome.runtime.id, ExtActions.resumeSync)
         break
       }
       case 'notification-on': {
-        await chrome.runtime.sendMessage({
+        await chrome.runtime.sendMessage(chrome.runtime.id, {
           type: ExtActions.changeBackgroundState,
           state: {
             showNotification: true
@@ -103,7 +103,7 @@ export default function Home() {
         break
       }
       case 'notification-off': {
-        await chrome.runtime.sendMessage({
+        await chrome.runtime.sendMessage(chrome.runtime.id, {
           type: ExtActions.changeBackgroundState,
           state: {
             showNotification: false
@@ -136,7 +136,7 @@ export default function Home() {
 
         try {
           url = new URL(url).toString();
-          chrome.runtime.sendMessage({
+          chrome.runtime.sendMessage(chrome.runtime.id, {
             type: ExtActions.changeBackgroundState,
             state: {
               syncRemoteHost: url
@@ -230,7 +230,7 @@ export default function Home() {
             reader.onload = async (e) => {
               const data = JSON.parse(reader.result as string);
 
-              chrome.runtime.sendMessage({
+              chrome.runtime.sendMessage(chrome.runtime.id, {
                 type: ExtActions.override,
                 data: data,
               }, (resp: { done: boolean, error?: Error }) => {

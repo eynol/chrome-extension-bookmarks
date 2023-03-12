@@ -111,7 +111,7 @@ export const DiffResult: React.FC = () => {
     const confirmResolveConflict = useCallback(() => {
         if (selectedKeys.length === 0) {
             // chrome.storage.sync.set({ [kSyncVersionId]: remoteSyncVersion })
-            chrome.runtime.sendMessage({
+            chrome.runtime.sendMessage(chrome.runtime.id, {
                 type: ExtActions.walkmarkedTree,
                 kind: 'forward',
                 nextVersionId: remoteSyncVersion,
@@ -127,7 +127,7 @@ export const DiffResult: React.FC = () => {
                 }
             })
 
-            chrome.runtime.sendMessage({
+            chrome.runtime.sendMessage(chrome.runtime.id, {
                 type: ExtActions.walkmarkedTree,
                 kind: 'merged-update',
                 nextVersionId: remoteSyncVersion,

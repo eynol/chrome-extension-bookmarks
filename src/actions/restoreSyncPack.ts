@@ -1,13 +1,13 @@
 import { kSyncFolderId, SyncPackNode } from "../constants/kv";
-import { isSameFolderByChildren } from "./isSameFolderByChildren";
+import * as chrome from "webextension-polyfill";
 import { mergeTwoTreeMark } from './mergeTwoTree'
 import { singleTreeWalker } from './markTreeWalker'
 import { EditedChromeNode } from "../interfaces";
 const clone = (a: any) => JSON.parse(JSON.stringify(a));
 
-export const getMarkedTree = async (syncPack: SyncPackNode, bookmarksLocal?: chrome.bookmarks.BookmarkTreeNode[]) => {
+export const getMarkedTree = async (syncPack: SyncPackNode, bookmarksLocal?: chrome.Bookmarks.BookmarkTreeNode[]) => {
     const { [kSyncFolderId]: syncFolderId } = await chrome.storage.sync.get(kSyncFolderId)
-    const bookmarks: chrome.bookmarks.BookmarkTreeNode[] = bookmarksLocal ?? await chrome.bookmarks.getSubTree(syncFolderId);
+    const bookmarks: chrome.Bookmarks.BookmarkTreeNode[] = bookmarksLocal ?? await chrome.bookmarks.getSubTree(syncFolderId);
     const root = bookmarks[0];
     const markedTree = mergeTwoTreeMark(clone(syncPack), clone(root))
     return markedTree;

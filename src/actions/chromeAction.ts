@@ -1,3 +1,5 @@
+import * as chrome from "webextension-polyfill";
+
 export const ActionUI = {
 
     yellow: (txt: string | number) => {

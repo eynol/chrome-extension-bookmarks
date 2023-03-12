@@ -26,7 +26,12 @@ config.plugins = [new webpack.HotModuleReplacementPlugin()].concat(
 );
 
 delete config.chromeExtensionBoilerplate;
+const vendorsPathMap = {
+  'ff': path.join(__dirname, 'build-ff'),
+  'chrome': path.join(__dirname, 'build'),
+}
 
+const buildPath = vendorsPathMap[process.env.VENDOR || 'chrome'];
 var compiler = webpack(config);
 
 var server = new WebpackDevServer(
@@ -37,7 +42,7 @@ var server = new WebpackDevServer(
     host: 'localhost',
     port: env.PORT,
     static: {
-      directory: path.join(__dirname, '../build'),
+      directory: buildPath,
     },
     devMiddleware: {
       publicPath: `http://localhost:${env.PORT}/`,

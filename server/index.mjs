@@ -71,6 +71,8 @@ const handleRequestBody = (req, cb) => {
     })
 }
 const server = http.createServer((req, res) => {
+    console.log(req.headers)
+    res.setHeader('Access-Control-Allow-Origin', '*')
     const reqUrl = new URL(req.url, `http://${req.headers.host}`);
     if (ENABLE_LOG) console.log(new Date().toLocaleString(), req.method + ' ' + req.url);
     if (reqUrl.pathname === '/favicon.ico') {
@@ -82,7 +84,7 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ version: app.getVersion() }));
     } else if (reqUrl.pathname === '/config' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-	fs.createReadStream(FILE_CONFIG).pipe(res)
+        fs.createReadStream(FILE_CONFIG).pipe(res)
     } else if (reqUrl.pathname === '/version' && req.method === 'POST') {
         handleRequestBody(req, (data) => {
             try {

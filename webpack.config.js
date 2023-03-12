@@ -9,6 +9,18 @@ var { CleanWebpackPlugin } = require('clean-webpack-plugin');
 
 const ASSET_PATH = process.env.ASSET_PATH || '/';
 
+const manifestPathMap = {
+  'ff': 'src/manifest.firefox.json',
+  'chrome': 'src/manifest.json',
+}
+const vendorsPathMap = {
+  'ff': path.join(__dirname, 'build-ff'),
+  'chrome': path.join(__dirname, 'build'),
+}
+
+const buildPath = vendorsPathMap[process.env.VENDOR || 'chrome'];
+const manifestPath = manifestPathMap[process.env.VENDOR || 'chrome'];
+
 var alias = {};
 
 // load the secrets
@@ -47,7 +59,7 @@ var options = {
   },
   output: {
     filename: '[name].bundle.js',
-    path: path.resolve(__dirname, 'build'),
+    path: buildPath,
     clean: true,
     publicPath: ASSET_PATH,
   },
@@ -114,8 +126,9 @@ var options = {
     new CopyWebpackPlugin({
       patterns: [
         {
-          from: 'src/manifest.json',
-          to: path.join(__dirname, 'build'),
+          from: manifestPath,
+          toType: 'file',
+          to: path.join(buildPath, 'manifest.json'),
           force: true,
           transform: function (content, path) {
             // generates the manifest file using the package.json informations
@@ -134,7 +147,7 @@ var options = {
       patterns: [
         {
           from: 'src/pages/Content/content.styles.css',
-          to: path.join(__dirname, 'build'),
+          to: buildPath,
           force: true,
         },
       ],
@@ -143,7 +156,7 @@ var options = {
       patterns: [
         {
           from: 'src/assets/img/icon-128.png',
-          to: path.join(__dirname, 'build'),
+          to: buildPath,
           force: true,
         },
       ],
@@ -152,7 +165,7 @@ var options = {
       patterns: [
         {
           from: 'src/assets/img/icon-34.png',
-          to: path.join(__dirname, 'build'),
+          to: buildPath,
           force: true,
         },
       ],
