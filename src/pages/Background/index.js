@@ -99,7 +99,7 @@ function setupFetchRemoteConfig() {
             ActionUI.yellow('离线')
             return
         }
-        const { [kSyncVersionId]: currentVersion } = await chrome.storage.sync.get(kSyncVersionId)
+        let { [kSyncVersionId]: currentVersion } = await chrome.storage.sync.get(kSyncVersionId)
         if (currentVersion === undefined) {
             // not set sync id
             return
@@ -121,16 +121,21 @@ function setupFetchRemoteConfig() {
             kUploadTask,
         ])
         if (uploadTask) {
+            console.warn('存在上传任务', remoteVersion, uploadTask.updateVersion)
             // 如果存在上传任务，先进行上传操作
             if (uploadTask.updateVersion === remoteVersion) {
                 // 如果上传的版本就是当前版本，那么直接上传
                 const result = await updateRemoteConfig(uploadTask)
                 if (result.version === uploadTask.updateVersion) {
                     // 上传的版本一样，说明没有更新成功
+                    console.warn('上传的版本一样，说明没有更新成功', result.version)
                 } else {
+                    console.warn('上传更新成功', result.version)
                     // 说明上传成功了
-                    await chrome.storage.local.remove(kUploadTask)
                     remoteVersion = result.version;
+                    currentVersion = result.version;
+                    await chrome.storage.local.remove(kUploadTask)
+                    await chrome.storage.sync.set({ [kSyncVersionId]: remoteVersion })
                 }
             }
         }
@@ -142,6 +147,8 @@ function setupFetchRemoteConfig() {
             if (localProcessing) {
                 return
             }
+            console.debug('update local remote ID', localRemoteId)
+
             const remoteSyncPack = await getRemoteConfig();
             // set data to there
             await chrome.storage.local.set({
@@ -339,7 +346,7 @@ async function checkShouldUpload(id) {
     const shouldUpload = walkTree(tree)
     if (shouldUpload) {
         clearTimeout(globalState.gatherTimmer)
-        globalState.gatherTimmer = setTimeout(updateSnapshot, 4000);
+        globalState.gatherTimmer = setTimeout(updateSnapshot, 1000);
     }
 
 }
